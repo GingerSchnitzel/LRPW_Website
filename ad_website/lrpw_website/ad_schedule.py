@@ -81,6 +81,10 @@ def scrape_notams(NOTAMS_URL = NOTAM.URL):
                     NOTAM_end_date = None
                     NOTAM_start_hour = None
                     NOTAM_end_hour = None
+                    NOTAM_clsd_days_D = []
+                    NOTAM_start_clsd_D = None
+                    NOTAM_end_clsd_D = None
+
 
                     #Regular expression to match section identifiers and their content
                     section_pattern = r'([A-Z])\)\s*(.*?)(?=(?: [A-Z]\)|$))'
@@ -92,6 +96,7 @@ def scrape_notams(NOTAMS_URL = NOTAM.URL):
                     for identifier, content in sections:
                         # Extract the start date (B) section)
                         if identifier == 'B' and NOTAM_start_date is None:
+                            #print(f"Content: {content}")
                             NOTAM_start_date = content.strip()[:6]  # Assuming the date is in YYMMDDhhmm format
                             NOTAM_start_hour = content.strip()[6:]
                             print(f"NOTAM_start_date: {NOTAM_start_date}")
@@ -104,9 +109,33 @@ def scrape_notams(NOTAMS_URL = NOTAM.URL):
                             print(f"NOTAM_end_date: {NOTAM_end_date}")
                             print(f"NOTAM_end_hour: {NOTAM_end_hour}")
 
+                        # Inside your loop for sections
+                        if identifier == 'D' and not NOTAM_clsd_days_D and NOTAM_start_clsd_D is None and NOTAM_end_clsd_D is None:
+                            if content.strip():  # Check if the D) section has content
+                                print(f"Parsing D) section: {content}")
+                                
+                                # Extract days before the first digit
+                                days_match = re.match(r"([A-Z\- ]+)", content)
+                                NOTAM_clsd_days_D = [day.strip() for day in days_match.group(1).split()] if days_match else []
+
+                                # Extract start and end times
+                                time_match = re.search(r"(\d{4})-(\d{4})", content)
+                                if time_match:
+                                    NOTAM_start_clsd_D = time_match.group(1)
+                                    NOTAM_end_clsd_D = time_match.group(2)
+                                
+                                # Debug output
+                                print(f"NOTAM_clsd_days_D: {NOTAM_clsd_days_D}")
+                                print(f"NOTAM_start_clsd_D: {NOTAM_start_clsd_D}")
+                                print(f"NOTAM_end_clsd_D: {NOTAM_end_clsd_D}")
+                            else:
+                                print("D) section exists but is empty.")
+
+
                         # Extract purpose of the NOTAM (E) section)
                         if identifier == 'E' and NOTAM_purpose is None:
                             NOTAM_purpose = content.strip()
+                            #print(f"Content: {content}")
                             print(f"NOTAM_purpose: {NOTAM_purpose}")
 
                         #Do something if NOTAM_purpose has a value and none of the variations are found in it
