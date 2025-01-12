@@ -1,21 +1,56 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NOTAM Results</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            padding: 0;
+            line-height: 1.6;
+        }
+        h1 {
+            color: #333;
+        }
+        .error {
+            color: red;
+            font-weight: bold;
+        }
+        .message {
+            color: blue;
+        }
+        .notam-details p {
+            margin: 5px 0;
+        }
+    </style>
 </head>
 <body>
     <h1>NOTAM Details</h1>
+
     {% if notam_data.error %}
-        <p>Error: {{ notam_data.error }}</p>
+        <p class="error">Error: {{ notam_data.error }}</p>
     {% elif notam_data.message %}
-        <p>{{ notam_data.message }}</p>
+        <p class="message">{{ notam_data.message }}</p>
     {% else %}
-        <p>NOTAM Text: {{ notam_data.notam_text }}</p>
-        <p>Purpose: {{ notam_data.purpose }}</p>
-        <p>Start Date: {{ notam_data.start_date }}</p>
-        <p>Start Hour: {{ notam_data.start_hour }}</p>
-        <p>End Date: {{ notam_data.end_date }}</p>
-        <p>End Hour: {{ notam_data.end_hour }}</p>
+        <div class="notam-details">
+            <p><strong>NOTAM Text:</strong> {{ notam_data.notam_text }}</p>
+            <p><strong>Purpose:</strong> {{ notam_data.purpose }}</p>
+            <p><strong>Start Date:</strong> {{ notam_data.start_date }}</p>
+            <p><strong>Start Hour:</strong> {{ notam_data.start_hour }}</p>
+            <p><strong>End Date:</strong> {{ notam_data.end_date }}</p>
+            <p><strong>End Hour:</strong> {{ notam_data.end_hour }}</p>
+
+            {% if notam_data.schedule %}
+                <p><strong>Schedule:</strong></p>
+                <ul>
+                    {% for time_range in notam_data.schedule %}
+                        <li>{{ time_range.0 }} - {{ time_range.1 }}</li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
+        </div>
     {% endif %}
 </body>
 </html>
