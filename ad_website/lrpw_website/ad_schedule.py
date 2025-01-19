@@ -1,12 +1,13 @@
 import requests
 from bs4 import BeautifulSoup
 from datetime import date, datetime, timedelta
+from enum import Enum
+from typing import List, Tuple, Optional
 import ssl
 from requests.adapters import HTTPAdapter
 from urllib3.poolmanager import PoolManager
 import re
-from enum import Enum
-from typing import List, Tuple, Optional
+
 
 
 class TLSAdapter(requests.adapters.HTTPAdapter):
@@ -22,177 +23,7 @@ class NOTAM:
     AD_OPEN = 'TEMPORARY CHANGE OF AD ADMINISTRATION OPS HOURS'
     SERIES_A = 'A'
     MAGIC_WORD = '/init/notam/getnotam'
-    days_times = {}
 
-
-class TokenType(Enum):
-    DAY = 1
-    DASH = 2
-    TIME_RANGE = 3
-    CLSD = 4
-    DATE = 5
-    INVALID = 6
-
-class Day(Enum):
-    MON = 1
-    TUE = 2
-    WED = 3
-    THU = 4
-    FRI = 5
-    SAT = 6
-    SUN = 7
-    INVALID = 8
-
-# Helper Functions
-def make_day_range(start: Day, end: Day) -> List[Day]:
-    if start == Day.INVALID or end == Day.INVALID:
-        return []
-    
-    # Handle the case when start day is after end day (e.g., MON - THU)
-    if start.value <= end.value:
-        return [Day(day) for day in range(start.value, end.value + 1)]
-    else:
-        return []
-
-def get_day(token: str) -> Day:
-    days_map = {
-        "MON": Day.MON,
-        "TUE": Day.TUE,
-        "WED": Day.WED,
-        "THU": Day.THU,
-        "FRI": Day.FRI,
-        "SAT": Day.SAT,
-        "SUN": Day.SUN,
-    }
-    return days_map.get(token.upper(), Day.INVALID)
-
-def is_time_range(token: str) -> bool:
-    return bool(re.match(r"^(\d{4})-(\d{4})$", token))
-
-def is_date(token: str) -> bool:
-    return bool(re.match(r"^\d{2} \w{3}( \d{4})?$", token))  # Matches formats like "06 NOV" or "06 NOV 2020"
-
-def parse_date(token: str) -> Optional[datetime]:
-    try:
-        current_year = datetime.now().year  # Get the current year
-        if len(token.split()) == 2:  # Format: "06 NOV"
-            return datetime.strptime(f"{token} {current_year}", "%d %b %Y")
-        elif len(token.split()) == 3:  # Format: "06 NOV 2020"
-            return datetime.strptime(token, "%d %b %Y")
-        return None
-    except ValueError:
-        return None
-
-def get_type(token: str) -> TokenType:
-    if get_day(token) != Day.INVALID:
-        return TokenType.DAY
-    elif token == "-":
-        return TokenType.DASH
-    elif is_time_range(token):
-        return TokenType.TIME_RANGE
-    elif token.upper() == "CLSD":
-        return TokenType.CLSD
-    elif is_date(token):
-        return TokenType.DATE
-    else:
-        return TokenType.INVALID
-
-def generate_date_range(start_date: datetime, end_date: datetime) -> List[datetime]:
-    """Generates all dates between start_date and end_date inclusive."""
-    delta = end_date - start_date
-    return [start_date + timedelta(days=i) for i in range(delta.days + 1)]
-
-# Parsing Functions
-def get_time_groups(tokens: List[str]) -> List[Tuple[List[datetime], List[str]]]:
-    class State(Enum):
-        START = 1
-        GOT_DAY = 2
-        GOT_DASH = 3
-        GOT_TIME_RANGE = 4
-        GOT_DATE = 5
-
-    state = State.START
-    current_dates = []
-    current_time_ranges = []
-    time_groups = []
-
-    for token in tokens:
-        token_type = get_type(token)
-
-        if state == State.START:
-            if token_type == TokenType.DAY:
-                current_dates.append(get_day(token))
-                state = State.GOT_DAY
-            elif token_type == TokenType.DATE:
-                current_dates.append(parse_date(token))
-                state = State.GOT_DATE
-            else:
-                raise ValueError(f"Unexpected token at start: {token}")
-
-        elif state == State.GOT_DATE:
-            if token_type == TokenType.DAY:
-                current_dates.append(get_day(token))
-                state = State.GOT_DAY
-            elif token_type in [TokenType.TIME_RANGE, TokenType.CLSD]:
-                current_time_ranges.append(token)
-                state = State.GOT_TIME_RANGE
-            elif token_type == TokenType.DASH:
-                state = State.GOT_DASH
-            else:
-                raise ValueError(f"Unexpected token after date: {token}")
-
-        elif state == State.GOT_DAY:
-            if token_type == TokenType.DAY:
-                current_dates.append(get_day(token))
-            elif token_type == TokenType.DASH:
-                state = State.GOT_DASH
-            elif token_type in [TokenType.TIME_RANGE, TokenType.CLSD]:
-                current_time_ranges.append(token)
-                state = State.GOT_TIME_RANGE
-            elif token_type == TokenType.DATE:
-                current_dates.append(parse_date(token))
-                state = State.GOT_DATE
-            else:
-                raise ValueError(f"Unexpected token after day: {token}")
-
-        elif state == State.GOT_DASH:
-            if token_type == TokenType.DAY:
-                # Handle dash between days
-                start_day = current_dates[-1]
-                end_day = get_day(token)
-                day_range = make_day_range(start_day, end_day)
-                current_dates.extend(day_range)
-                state = State.GOT_DAY
-            elif token_type == TokenType.DATE:
-                # Handle dash between dates
-                start_date = current_dates[-1]
-                end_date = parse_date(token)
-                date_range = generate_date_range(start_date, end_date)
-                current_dates.extend(date_range)
-                state = State.GOT_DATE
-            else:
-                raise ValueError(f"Unexpected token after dash: {token}")
-
-        elif state == State.GOT_TIME_RANGE:
-            if token_type in [TokenType.TIME_RANGE, TokenType.CLSD]:
-                current_time_ranges.append(token)
-            elif token_type == TokenType.DATE:
-                time_groups.append((current_dates, current_time_ranges))
-                current_dates = [parse_date(token)]
-                current_time_ranges = []
-                state = State.GOT_DATE
-            elif token_type == TokenType.DAY:
-                time_groups.append((current_dates, current_time_ranges))
-                current_dates = [get_day(token)]
-                current_time_ranges = []
-                state = State.GOT_DAY
-            else:
-                raise ValueError(f"Unexpected token after time range: {token}")
-
-    if current_dates and current_time_ranges:
-        time_groups.append((current_dates, current_time_ranges))
-
-    return time_groups
 
 def process_tokens(tokens: List[str]):
     notam_data = []
@@ -209,26 +40,38 @@ def process_tokens(tokens: List[str]):
                     # Only add day name if no full date entry exists already
                     if not any(d.startswith(date_str) for d, t in notam_data):
                         notam_data.append((date_str, time_ranges))
+                    continue
+                elif ',' in date:
+                    # Full date available, format it again for safety
+                    date_str = date
 
+                    # Remove any existing entry for the corresponding day-only entry with the same time range
+                    notam_data = [
+                        (d, t) for d, t in notam_data
+                        if not (d == date_str[:3] and t == time_ranges)
+                    ]
+                '''   
                 elif isinstance(date, datetime):
-                    # Full date available, format it
                     day_date = date.strftime('%a, %d %b %Y').upper()
 
                     # Remove any existing entry for the corresponding day-only entry with the same time range
                     notam_data = [
                         (d, t) for d, t in notam_data
-                        if not (d.startswith(date.strftime('%a').upper()) and t == time_ranges)
+                        if not (d == date_str and t == time_ranges)
                     ]
-
-                    # Add the full date entry
-                    notam_data.append((day_date, time_ranges))
-
-        # Print the processed data
-        for date, times in notam_data:
-            print(f"{date}: {', '.join(times)}")
+                '''   
+                # Add the full date entry
+                notam_data.append((date_str, time_ranges))
+        
+        # Return the processed data
+        return notam_data
 
     except ValueError as e:
         print("Error:", e)
+        return []
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
+        return []
 '''     
 # Example Usage
 tokens1 = ["FRI", "10 JAN", "0800-1500", "SAT", "11 JAN 2025", "CLSD"]
@@ -239,7 +82,6 @@ tokens5 = ["10 JAN 2024", "-", "14 JAN 2024", "0800-1500", "1600-1700"]
 tokens6 = ["10 JAN", "0800-1500"]
 tokens7 = ["20 JAN", "-", "25 JAN", "0800-1500"]
 
-
 process_tokens(tokens1)
 process_tokens(tokens2)
 process_tokens(tokens3)
@@ -249,33 +91,118 @@ process_tokens(tokens6)
 process_tokens(tokens7)
 '''
 
-"""
-    Parses the D) or E) sections of a NOTAM to extract day and time ranges.
-"""
-def associate_day_time_ranges(content):
+def get_next_day_name(current_day_name):
+    # Map of day names to get the next day
+    day_map = {
+        "MON": "TUE", "TUE": "WED", "WED": "THU", "THU": "FRI", "FRI": "SAT", "SAT": "SUN", "SUN": "MON"
+    }
+    return day_map.get(current_day_name)
+
+def parse_date_from_yyyymmdd(date_str: str) -> datetime:
+    return datetime.strptime(date_str, '%y%m%d')
+
+def get_weekday_date(start_date: datetime, weekday: Day) -> datetime:
+    """Get the next weekday date from a given start_date."""
+    days_ahead = weekday.value - 1 - start_date.weekday()  # Adjust for Python's weekday starting at 0 (Monday)
+    if days_ahead < 0:
+        days_ahead += 7
+    return start_date + timedelta(days=days_ahead)
+
+def format_date(date: datetime) -> str:
+    return date.strftime('%a, %d %b %Y').upper()
+
+def process_weekdays_with_dates(start_date: str, end_date: str, notam_data: List[str]) -> List[str]:
+    start_date = parse_date_from_yyyymmdd(start_date)
+    end_date = parse_date_from_yyyymmdd(end_date)
+    
+    notam_data_with_dates = []
+    current_date = None
+
+    i = 0
+    while i < len(notam_data):
+        day_entry = notam_data[i]  # This is a list: [day, [time_ranges]]
+        day_token = day_entry[0]   # The day (e.g., "FRI", "TUE, 14 JAN 2025")
+        time_ranges = day_entry[1]  # The list of time ranges (e.g., ["0800-1500", "1600-1900"])
+        pattern = r'\b(MON|TUE|WED|THU|FRI|SAT|SUN)\b'
+        match = re.search(pattern, day_token)
+        found_day = match.group(0)
+        day_enum = get_day(found_day)
+        
+        if day_enum != Day.INVALID:  # If the token is a valid weekday
+            # If the day token is a date (e.g., "TUE, 14 JAN 2025")
+            if ',' in day_token:  # It contains a full date
+                current_date = datetime.strptime(day_token, "%a, %d %b %Y")
+            else:
+                # Compute the date for the weekday if it's just a weekday without a date
+                current_date = get_weekday_date(start_date, day_enum)
+
+            # Check if the current_date falls within the start_date and end_date
+            if current_date and start_date <= current_date <= end_date:
+                # Add the day and its corresponding formatted date
+                #notam_data_with_dates.append(day_token)  # The weekday name or full date
+                notam_data_with_dates.append(format_date(current_date))  # The formatted date string
+                
+                # Add the time ranges associated with this day
+                for time_range in time_ranges:
+                    notam_data_with_dates.append(time_range)
+
+        i += 1  # Move to the next entry in notam_data
+    
+    return notam_data_with_dates
+
+
+def parse_NOTAM_content(start_date, end_date, content):
+    """
+    Parses NOTAM content to extract day, date, and time ranges.
+
+    Args:
+        content (str): The NOTAM content to parse.
+
+    Returns:
+        list: A list of extracted schedules in a structured format.
+              Returns an empty list if parsing fails.
+    """
     try:
-        # Extract day ranges and time intervals using regex
-       
-        day_time_pattern = r"(?:MON|TUE|WED|THU|FRI|SAT|SUN)(?:-(?:MON|TUE|WED|THU|FRI|SAT|SUN))?|(?:\d{4}-\d{4}|CLSD)"
-        matches = re.findall(day_time_pattern, content)
-        # Handle case where no valid day-time patterns are found
-        if not matches:
+        # Regex pattern to match day ranges, dates, and time intervals
+        day_time_pattern = (
+            r'((?:MON|TUE|WED|THU|FRI|SAT|SUN))\s*,?\s*(\d{1,2}\s*'  # Day of the week followed by a date
+            r'(?:JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)\s*'  # Month abbreviation
+            r'(?:\d{4}(?!-\d{4}))?)|'  # Optional 4-digit year (not followed by a range)
+            r'(\d{1,2}\s*(?:JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)\s*'  # Date format with month abbreviation
+            r'(?:\d{4}(?!-\d{4}))?)|'  # Optional 4-digit year (not followed by a range)
+            r'((?:MON|TUE|WED|THU|FRI|SAT|SUN))|'  # Day of the week
+            r'(\d{4}-\d{4})|'  # Time range format (e.g., 0800-1500)
+            r'(CLSD)|'  # CLSD keyword
+            r'(-)'  # Dash
+
+        )
+
+        # # Use re.finditer to match groups and extract each string individually
+        matches = re.finditer(day_time_pattern, content)
+
+      # Extract each matched string from the groups
+        filtered_matches = []
+        for match in matches:
+            for group in match.groups():
+                if group:
+                    filtered_matches.append(group)
+      
+        if not filtered_matches:
             raise ValueError("No valid day-time patterns found in the content.")
 
-        try:
-            time_groups = get_time_groups(matches)
-            for days, time_ranges in time_groups:
-                NOTAM.days_times.append()
+        # Process matches to extract structured schedule
+        extracted_schedule = process_tokens(filtered_matches)  
+        processed_schedule = process_weekdays_with_dates(start_date, end_date,extracted_schedule)
+        # Return the structured schedule
+        return processed_schedule
 
-        except ValueError as e:
-            print("Error:", e)
-            
-    except ValueError as e:
-        print(f"ValueError: {e}")
-        NOTAM_days_times = {}  # Return an empty dictionary on error
+    except ValueError as ve:
+        print(f"ValueError: {ve}")
     except Exception as e:
         print(f"An unexpected error occurred: {e}")
-        NOTAM_days_times = {}  # Return an empty dictionary on error
+
+    # Return an empty list on error
+    return []
 
 """
     Scrapes NOTAMs from the specified URL and extracts details for relevant NOTAMs.
@@ -303,9 +230,14 @@ def scrape_notams(NOTAMS_URL = NOTAM.URL):
         # Get the current date
         print("Parsing response content.")
         current_date = date.today()
-        formatted_date = current_date.strftime("%y%m%d")  # Format the date as YYMMDD
+        YYMMDD_date = current_date.strftime("%y%m%d")  # Format the date as YYMMDD
+        long_date = current_date.strftime("%d %b %Y").upper() # Format the full date as "15 SEP 2024"
+        short_date = current_date.strftime("%d %b").upper() # Format the short date as "15 SEP"
+
+        
         current_day = datetime.now().strftime("%a").upper()  # Get the current day of the week as a three-letter abbreviation eg. SAT
-        print(f"Formatted date: {formatted_date}")
+        next_day = get_next_day_name(current_day) # Get the next day of the week as a three-letter abbreviation eg. SAT
+        print(f"Formatted date: {YYMMDD_date}")
         print(f"Current day of week: {current_day}")
 
         # Iterate over all the NOTAMs on the page
@@ -342,7 +274,8 @@ def scrape_notams(NOTAMS_URL = NOTAM.URL):
                     NOTAM_end_date = None
                     NOTAM_start_hour = None
                     NOTAM_end_hour = None
-                    NOTAM_days_times = {}
+                    NOTAM_schedule = []
+                    NOTAM_current_and_next_day_schedule = {}
                     
                     #Regular expression to match section identifiers and their content
                     section_pattern = r'([A-Z])\)\s*(.*?)(?=(?: [A-Z]\)|$))'
@@ -374,10 +307,11 @@ def scrape_notams(NOTAMS_URL = NOTAM.URL):
                                 print(f"NOTAM_end_hour: {NOTAM_end_hour}")
 
                             # Extract the schedule IF a/d closed (D) section
-                            if identifier == 'D' and not NOTAM_days_times:
+                            if identifier == 'D' and not NOTAM_schedule:
                                 if content.strip():  # Check if the D) section has content
                                     print(f"Parsing D) section: {content}")
-                                    NOTAM_days_times = parse_NOTAM_schedule(content)
+                                    NOTAM_schedule = parse_NOTAM_content(content)
+
                                 else:
                                     print("D) section exists but is empty.")
 
@@ -388,8 +322,9 @@ def scrape_notams(NOTAMS_URL = NOTAM.URL):
                                     NOTAM_purpose = NOTAM.AD_CLOSED
                                 elif NOTAM.AD_OPEN in NOTAM_section_E:
                                     NOTAM_purpose = NOTAM.AD_OPEN
-                                    if not NOTAM_days_times:
-                                        NOTAM_days_times = parse_NOTAM_schedule(content)
+                                if not NOTAM_schedule:
+                                        NOTAM_schedule = parse_NOTAM_content(content)
+                                    
             
                                 #print(f"Content: {content}")
                                 print(f"NOTAM_purpose: {NOTAM_purpose}")
@@ -403,12 +338,13 @@ def scrape_notams(NOTAMS_URL = NOTAM.URL):
                         NOTAM_start_date = None
                         NOTAM_start_hour = None
                         NOTAM_end_hour = None
+                        NOTAM_schedule = []
                         break
 
                     elif NOTAM_start_date and NOTAM_end_date and NOTAM_purpose:
-                        if NOTAM_start_date <= formatted_date <= NOTAM_end_date:
-                            if NOTAM_days_times:
-                                if current_day in NOTAM_days_times:
+                        if NOTAM_start_date <= YYMMDD_date <= NOTAM_end_date:
+                            if NOTAM_purpose and NOTAM_schedule:
+                                if current_day in NOTAM_schedule:
                                     print("Valid NOTAM found:", notam_text)
                                     return {
                                     'notam_text': notam_text,
@@ -417,7 +353,7 @@ def scrape_notams(NOTAMS_URL = NOTAM.URL):
                                     'start_hour': NOTAM_start_hour,
                                     'end_date': NOTAM_end_date,
                                     'end_hour': NOTAM_end_hour,
-                                    'schedule': NOTAM_days_times[current_day],
+                                    'schedule': NOTAM_schedule,
                                     }
                             else:
                                 print("Valid NOTAM found:", notam_text)
