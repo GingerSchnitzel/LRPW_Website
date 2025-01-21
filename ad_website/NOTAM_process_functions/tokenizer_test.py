@@ -3,6 +3,7 @@ from enum import Enum
 from typing import List, Tuple, Optional
 import re
 import unittest
+from dateutil.parser import parse
 
 
 class TokenType(Enum):
@@ -56,20 +57,42 @@ def is_time_range(token: str) -> bool:
 def is_date(token: str) -> bool:
     return bool(re.match(r"^\d{2} \w{3}( \d{4})?$", token))  # Matches formats like "06 NOV" or "06 NOV 2020"
 
+from datetime import datetime
+from dateutil.parser import parse
+from typing import Optional
+
 def parse_date(token: str) -> Optional[str]:
     try:
-        current_year = datetime.now().year  # Get the current year
-        if len(token.split()) == 2:  # Format: "06 NOV"
-            parsed_date = datetime.strptime(f"{token} {current_year}", "%d %b %Y")
-        elif len(token.split()) == 3:  # Format: "06 NOV 2020"
-            parsed_date = datetime.strptime(token, "%d %b %Y")
+        current_date = datetime.now()  # Get the current date and time
+        current_year = current_date.year  # Get the current year
+
+        # Handle cases with two parts: "DD MMM"
+        if len(token.split()) == 2:
+            # Parse the date with the current year and the previous year
+            date_with_current_year = parse(f"{token} {current_year}")
+            date_with_previous_year = parse(f"{token} {current_year - 1}")
+
+            # Determine which date is closer to today
+            parsed_date = min(
+                [date_with_current_year, date_with_previous_year],
+                key=lambda d: abs((d - current_date).total_seconds())
+            )
+
+        # Handle cases with three parts: "DD MMM YYYY"
+        elif len(token.split()) == 3:
+            parsed_date = parse(token)
+
+        # Invalid format
         else:
             return None
-        
-        formatted_date = parsed_date.strftime("%a, %d %b %Y").upper()  # Format as "FRI, 10 JAN 2025"
+
+        # Format the date as "FRI, 10 JAN 2025"
+        formatted_date = parsed_date.strftime("%a, %d %b %Y").upper()
         return formatted_date
+
     except ValueError:
         return None
+
 
 
 def get_type(token: str) -> TokenType:
@@ -209,8 +232,11 @@ def get_time_groups(tokens: List[str]) -> List[Tuple[List[datetime], List[str]]]
                 state = State.GOT_DATE
             elif token_type == TokenType.DAY:
                 time_groups.append((current_dates, current_time_ranges))
-                current_dates = [get_day(token)]
+                current_dates = []
                 current_time_ranges = []
+                next_token = peek(tokens, i)
+                if not is_date(next_token):
+                    current_dates = [get_day(token)]
                 state = State.GOT_DAY
             else:
                 raise ValueError(f"Unexpected token after time range: {token}")
@@ -220,11 +246,6 @@ def get_time_groups(tokens: List[str]) -> List[Tuple[List[datetime], List[str]]]
 
     return time_groups
 
-
-    if current_dates and current_time_ranges:
-        time_groups.append((current_dates, current_time_ranges))
-
-    return time_groups
 
 class TestFunctions(unittest.TestCase):
     def test_make_day_range(self):
@@ -277,22 +298,25 @@ class TestFunctions(unittest.TestCase):
 
     def test_get_time_groups(self):
         tokens = [
-            #"MON", "0800-1300", "WED", "CLSD", "10 JAN", "0800-1200", 
-            #"12 JAN", "MON", "CLSD", "14 JAN 2025", "-", "16 JAN 2025", "0800-1600",
-            #"SAT", "SUN", "CLSD", "MON", "-", "FRI", "0800-1300", 
-            "MON", "30 DEC 2024", "-", "THU", "02 JAN 2025", "CLSD"
+            "MON", "0800-1300", "WED", "CLSD", "10 JAN", "0800-1200", 
+            "12 JAN", "MON", "CLSD", "14 JAN 2025", "-", "16 JAN 2025", "0800-1600",
+            "SAT", "SUN", "CLSD", 
+            "MON", "-", "FRI", "0800-1300", 
+            "MON", "30 DEC 2024", "-", "THU", "02 JAN 2025", "CLSD",
+            "31 DEC", "-", "02 JAN", "0800-1200"
         ]
         result = get_time_groups(tokens)
         
         expected = [
-        #([Day.MON], ["0800-1300"]),
-        #([Day.WED], ["CLSD"]),
-        #(["FRI, 10 JAN 2025"], ["0800-1200"]),
-        #(["SUN, 12 JAN 2025", Day.MON], ["CLSD"]),
-        #(["TUE, 14 JAN 2025", "WED, 15 JAN 2025", "THU, 16 JAN 2025"], ["0800-1600"]),
-        #([Day.SAT, Day.SUN], ["CLSD"]),
-        #([Day.MON, Day.TUE, Day.WED, Day.THU, Day.FRI], ["0800-1300"]),
-        (["MON, 30 DEC 2024", "TUE, 31 DEC 2024", "WED, 01 JAN 2025","THU, 02 JAN 2025"], ["CLSD"])
+        ([Day.MON], ["0800-1300"]),
+        ([Day.WED], ["CLSD"]),
+        (["FRI, 10 JAN 2025"], ["0800-1200"]),
+        (["SUN, 12 JAN 2025", Day.MON], ["CLSD"]),
+        (["TUE, 14 JAN 2025", "WED, 15 JAN 2025", "THU, 16 JAN 2025"], ["0800-1600"]),
+        ([Day.SAT, Day.SUN], ["CLSD"]),
+        ([Day.MON, Day.TUE, Day.WED, Day.THU, Day.FRI], ["0800-1300"]),
+        (["MON, 30 DEC 2024", "TUE, 31 DEC 2024", "WED, 01 JAN 2025","THU, 02 JAN 2025"], ["CLSD"]),
+        (["TUE, 31 DEC 2024", "WED, 01 JAN 2025","THU, 02 JAN 2025"], ["0800-1200"])
 
         ]
         self.assertEqual(result, expected)
