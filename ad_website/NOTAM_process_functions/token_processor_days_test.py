@@ -1,7 +1,5 @@
 import unittest
-from unittest.mock import patch
-from token_processor import process_tokens
-from tokenizer import get_time_groups, Day
+from token_processor_days import process_tokens
 
 class TestProcessTokens(unittest.TestCase):
 
@@ -26,18 +24,15 @@ class TestProcessTokens(unittest.TestCase):
         self.assertEqual(result, expected_output)
 
 
-    def test_priority_of_full_date_over_day(self):
-        """Test that repetitive """
-        tokens = ["FRI","0800-1300","FRI", "10 JAN 2025","0800-1200"]
-            
+    def test_process_tokens_with_different_time_range(self):
+        """Test that repetitive day tokens with different time ranges are not deleted"""
         
+        tokens = ["FRI","0800-1300","FRI", "10 JAN 2025","0800-1200"]
         expected_output = [("FRI", ["0800-1300"]),("FRI, 10 JAN 2025", ["0800-1200"])]
 
         result = process_tokens(tokens)
         self.assertEqual(result, expected_output)
 
-
-  
     def test_empty_tokens(self):
         """Test that an empty list of tokens returns an empty list."""
 
