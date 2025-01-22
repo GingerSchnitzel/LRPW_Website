@@ -42,7 +42,6 @@ def process_tokens(tokens: List[str]):
                         notam_data.append((date_str, time_ranges))
                     continue
                 elif ',' in date:
-                    # Full date available, format it again for safety
                     date_str = date
 
                     # Remove any existing entry for the corresponding day-only entry with the same time range
@@ -72,24 +71,6 @@ def process_tokens(tokens: List[str]):
     except Exception as e:
         print(f"An unexpected error occurred: {e}")
         return []
-'''     
-# Example Usage
-tokens1 = ["FRI", "10 JAN", "0800-1500", "SAT", "11 JAN 2025", "CLSD"]
-tokens2 = ["TUE", "0800-1500", "WED", "CLSD"]  # no date
-tokens3 = ["FRI", "10 JAN 2025", "0800-1500", "SAT", "11 JAN", "CLSD"]  # mix of dates with and without year
-tokens4 = ["MON", "TUE", "-", "THU", "0900-1700"]  # dash between days
-tokens5 = ["10 JAN 2024", "-", "14 JAN 2024", "0800-1500", "1600-1700"]
-tokens6 = ["10 JAN", "0800-1500"]
-tokens7 = ["20 JAN", "-", "25 JAN", "0800-1500"]
-
-process_tokens(tokens1)
-process_tokens(tokens2)
-process_tokens(tokens3)
-process_tokens(tokens4)
-process_tokens(tokens5)
-process_tokens(tokens6)
-process_tokens(tokens7)
-'''
 
 def get_next_day_name(current_day_name):
     # Map of day names to get the next day
