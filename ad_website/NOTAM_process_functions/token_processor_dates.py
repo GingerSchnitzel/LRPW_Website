@@ -13,12 +13,22 @@ def get_next_day_name(current_day_name):
 def parse_date_from_yyyymmdd(date_str: str) -> datetime:
     return datetime.strptime(date_str, '%y%m%d')
 
-def get_weekday_date(start_date: datetime, weekday: Day) -> datetime:
-    """Get the next weekday date from a given start_date."""
+def get_weekday_date(start_date: datetime, weekday: Day, assigned_dates: set) -> datetime:
+    """Get the next weekday date from a given start_date, ensuring that the date is not repeated."""
     days_ahead = weekday.value - 1 - start_date.weekday()  # Adjust for Python's weekday starting at 0 (Monday)
     if days_ahead < 0:
         days_ahead += 7
-    return start_date + timedelta(days=days_ahead)
+    
+    current_date = start_date + timedelta(days=days_ahead)
+
+    # Keep moving to the next week if the date has already been assigned
+    while current_date in assigned_dates:
+        current_date += timedelta(weeks=1)
+
+    # Mark this date as assigned
+    assigned_dates.add(current_date)
+    
+    return current_date
 
 def format_date(date: datetime) -> str:
     return date.strftime('%a, %d %b %Y').upper()
@@ -39,6 +49,7 @@ def process_weekdays_with_dates(start_date: str, end_date: str, notam_data: List
         match = re.search(pattern, day_token)
         found_day = match.group(0)
         day_enum = get_day(found_day)
+        assigned_dates = set()
         
         if day_enum != Day.INVALID:  # If the token is a valid weekday
             # If the day token is a date (e.g., "TUE, 14 JAN 2025")
@@ -46,7 +57,7 @@ def process_weekdays_with_dates(start_date: str, end_date: str, notam_data: List
                 current_date = datetime.strptime(day_token, "%a, %d %b %Y")
             else:
                 # Compute the date for the weekday if it's just a weekday without a date
-                current_date = get_weekday_date(start_date, day_enum)
+                current_date = get_weekday_date(start_date, day_enum, assigned_dates)
 
             # Check if the current_date falls within the start_date and end_date
             if current_date and start_date <= current_date <= end_date:
