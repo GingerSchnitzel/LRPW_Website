@@ -25,10 +25,14 @@ class TestDateProcessingFunctions(unittest.TestCase):
 
     def test_get_weekday_date(self):
         """Test getting the next date for a given weekday."""
+        assigned_dates = set()
         start_date = datetime(2025, 1, 22)  # Wednesday
-        self.assertEqual(get_weekday_date(start_date, Day.MON), datetime(2025, 1, 27))
-        self.assertEqual(get_weekday_date(start_date, Day.WED), datetime(2025, 1, 22))
-        self.assertEqual(get_weekday_date(start_date, Day.SUN), datetime(2025, 1, 26))
+        self.assertEqual(get_weekday_date(start_date, Day.MON, assigned_dates), datetime(2025, 1, 27))
+        assigned_dates.clear()
+        self.assertEqual(get_weekday_date(start_date, Day.WED, assigned_dates), datetime(2025, 1, 22))
+        assigned_dates.clear()
+        self.assertEqual(get_weekday_date(start_date, Day.SUN, assigned_dates), datetime(2025, 1, 26))
+        assigned_dates.clear()
 
     def test_format_date(self):
         """Test formatting a datetime object to a specific string format."""

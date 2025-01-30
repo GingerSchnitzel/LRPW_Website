@@ -39,6 +39,7 @@ def process_weekdays_with_dates(start_date: str, end_date: str, notam_data: List
     
     notam_data_with_dates = []
     current_date = None
+    assigned_dates = set()
 
     i = 0
     while i < len(notam_data):
@@ -49,7 +50,7 @@ def process_weekdays_with_dates(start_date: str, end_date: str, notam_data: List
         match = re.search(pattern, day_token)
         found_day = match.group(0)
         day_enum = get_day(found_day)
-        assigned_dates = set()
+        
         
         if day_enum != Day.INVALID:  # If the token is a valid weekday
             # If the day token is a date (e.g., "TUE, 14 JAN 2025")

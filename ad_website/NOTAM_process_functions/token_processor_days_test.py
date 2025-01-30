@@ -8,9 +8,11 @@ class TestProcessTokens(unittest.TestCase):
         """Test processing tokens with day names."""
  
         tokens = ["MON", "TUE", "1200-1800"]
+        start_date = "250101"
+        end_date =  "250131"
         expected_output = [("MON", ["1200-1800"]), ("TUE", ["1200-1800"])]
 
-        result = process_tokens(tokens)
+        result = process_tokens(tokens, start_date, end_date)
         self.assertEqual(result, expected_output)
 
 
@@ -18,9 +20,11 @@ class TestProcessTokens(unittest.TestCase):
         """Test processing tokens with a date range."""
        
         tokens = ["FRI", "10 JAN 2025","0800-1200"]
+        start_date = "250101"
+        end_date =  "250131"
         expected_output = [("FRI, 10 JAN 2025", ["0800-1200"])]
 
-        result = process_tokens(tokens)
+        result = process_tokens(tokens, start_date, end_date)
         self.assertEqual(result, expected_output)
 
 
@@ -28,18 +32,22 @@ class TestProcessTokens(unittest.TestCase):
         """Test that repetitive day tokens with different time ranges are not deleted"""
         
         tokens = ["FRI","0800-1300","FRI", "10 JAN 2025","0800-1200"]
+        start_date = "250101"
+        end_date =  "250131"
         expected_output = [("FRI", ["0800-1300"]),("FRI, 10 JAN 2025", ["0800-1200"])]
 
-        result = process_tokens(tokens)
+        result = process_tokens(tokens, start_date, end_date)
         self.assertEqual(result, expected_output)
 
     def test_empty_tokens(self):
         """Test that an empty list of tokens returns an empty list."""
-
+        
+        start_date = "250101"
+        end_date =  "250131"
         tokens = []
         expected_output = []
 
-        result = process_tokens(tokens)
+        result = process_tokens(tokens, start_date, end_date)
         self.assertEqual(result, expected_output)
 
 if __name__ == '__main__':
