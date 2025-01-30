@@ -1,7 +1,7 @@
 from typing import List, Tuple, Optional
 from tokenizer import get_time_groups, Day
 
-def process_tokens(tokens: List[str]):
+def process_tokens(tokens: List[str], start_date: str, end_date: str):
     """
     Processes a list of tokens representing NOTAM information and organizes them into 
     a structured list of tuples containing day/date and corresponding time ranges.
@@ -18,7 +18,7 @@ def process_tokens(tokens: List[str]):
 
     try:
         # Extract day/date and time range groups from tokens using a helper function.
-        time_groups = get_time_groups(tokens)
+        time_groups = get_time_groups(tokens, start_date, end_date)
 
         # Iterate through the extracted groups of days/dates and time ranges.
         for days, time_ranges in time_groups:

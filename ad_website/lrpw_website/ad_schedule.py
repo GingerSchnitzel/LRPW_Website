@@ -25,53 +25,6 @@ class NOTAM:
     MAGIC_WORD = '/init/notam/getnotam'
 
 
-def process_tokens(tokens: List[str]):
-    notam_data = []
-
-    try:
-        time_groups = get_time_groups(tokens)
-
-        for days, time_ranges in time_groups:
-            for date in days:
-                if isinstance(date, Day):
-                    # Only day name, format it
-                    date_str = date.name  # Get the name of the enum (e.g., "MON", "FRI")
-
-                    # Only add day name if no full date entry exists already
-                    if not any(d.startswith(date_str) for d, t in notam_data):
-                        notam_data.append((date_str, time_ranges))
-                    continue
-                elif ',' in date:
-                    date_str = date
-
-                    # Remove any existing entry for the corresponding day-only entry with the same time range
-                    notam_data = [
-                        (d, t) for d, t in notam_data
-                        if not (d == date_str[:3] and t == time_ranges)
-                    ]
-                '''   
-                elif isinstance(date, datetime):
-                    day_date = date.strftime('%a, %d %b %Y').upper()
-
-                    # Remove any existing entry for the corresponding day-only entry with the same time range
-                    notam_data = [
-                        (d, t) for d, t in notam_data
-                        if not (d == date_str and t == time_ranges)
-                    ]
-                '''   
-                # Add the full date entry
-                notam_data.append((date_str, time_ranges))
-        
-        # Return the processed data
-        return notam_data
-
-    except ValueError as e:
-        print("Error:", e)
-        return []
-    except Exception as e:
-        print(f"An unexpected error occurred: {e}")
-        return []
-
 def get_next_day_name(current_day_name):
     # Map of day names to get the next day
     day_map = {

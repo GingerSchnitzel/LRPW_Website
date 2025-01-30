@@ -1,13 +1,33 @@
 import unittest
-from tokenizer import Day, TokenType, make_day_range, get_day, is_time_range, is_date, parse_date, get_type, generate_date_range, get_time_groups
+from tokenizer import Day, TokenType,parse_year, make_day_range, get_day, is_time_range, is_date, parse_date, get_type, generate_date_range, get_time_groups
+from datetime import datetime
 
 class TestFunctions(unittest.TestCase):
+    def test_parse_year(self):
+        # Test valid date strings in YYMMDD format
+        self.assertEqual(parse_year("250106"), datetime(2025, 1, 6))  # 25th of January, 2025
+        self.assertEqual(parse_year("230315"), datetime(2023, 3, 15))  # 15th of March, 2023
+        self.assertEqual(parse_year("220501"), datetime(2022, 5, 1))   # 1st of May, 2022
+        self.assertEqual(parse_year("190912"), datetime(2019, 9, 12))  # 12th of September, 2019
+
+        # Test edge cases for dates
+        self.assertEqual(parse_year("990101"), datetime(1999, 1, 1))  # 1st of January, 1999
+        self.assertEqual(parse_year("000101"), datetime(2000, 1, 1))  # 1st of January, 2000
+
+        # Test invalid date strings (this will raise a ValueError)
+        with self.assertRaises(ValueError):
+            parse_year("25013Z")  # Invalid month
+        with self.assertRaises(ValueError):
+            parse_year("25099X")  # Invalid day
+
     def test_make_day_range(self):
-        self.assertEqual(make_day_range(Day.MON, Day.WED), [Day.MON, Day.TUE, Day.WED])
-        self.assertEqual(make_day_range(Day.FRI, Day.MON), [Day.FRI, Day.SAT, Day.SUN, Day.MON])
-        self.assertEqual(make_day_range(Day.MON, Day.MON), [Day.MON, Day.TUE, Day.WED, Day.THU, Day.FRI, Day.SAT, Day.SUN, Day.MON])
-        self.assertEqual(make_day_range(Day.INVALID, Day.MON), [])
-        self.assertEqual(make_day_range(Day.MON, Day.INVALID), [])
+        self.assertEqual(make_day_range(Day.MON, Day.WED, "250101", "250103"), [Day.MON, Day.TUE, Day.WED])
+        self.assertEqual(make_day_range(Day.FRI, Day.MON, "250102", "250104"), [Day.FRI, Day.SAT, Day.SUN, Day.MON])
+        self.assertEqual(make_day_range(Day.MON, Day.MON, "250101", "250107"), [Day.MON, Day.TUE, Day.WED, Day.THU, Day.FRI, Day.SAT, Day.SUN, Day.MON])
+        self.assertEqual(make_day_range(Day.INVALID, Day.MON, "250101", "250107"), [])
+        self.assertEqual(make_day_range(Day.MON, Day.INVALID, "250101", "250120"), [])
+        self.assertEqual(make_day_range(Day.MON, Day.MON, "250106", "250120"), [Day.MON, Day.TUE, Day.WED, Day.THU, Day.FRI, Day.SAT, Day.SUN, Day.MON, Day.TUE, Day.WED, Day.THU, Day.FRI, Day.SAT, Day.SUN, Day.MON])
+
 
     def test_get_day(self):
         self.assertEqual(get_day("MON"), Day.MON)
@@ -59,7 +79,9 @@ class TestFunctions(unittest.TestCase):
             "MON", "30 DEC 2024", "-", "THU", "02 JAN 2025", "CLSD",
             "31 DEC", "-", "02 JAN", "0800-1200"
         ]
-        result = get_time_groups(tokens)
+        start_date = "240101"
+        end_date = "251231"
+        result = get_time_groups(tokens, start_date, end_date)
         
         expected = [
         ([Day.MON], ["0800-1300"]),
@@ -77,7 +99,26 @@ class TestFunctions(unittest.TestCase):
 
         # Test invalid tokens
         with self.assertRaises(ValueError):
-            get_time_groups(["INVALID", "0800-1300"])
+            tkn = ["INVALID", "0800-1300"]
+            get_time_groups(tkn, start_date, end_date)
+
+    def test_get_time_groups_special_cases(self):
+        token =["MON","-", "TUE", "0800-1300"]
+        self.assertEqual(get_time_groups(token, "250106", "250121"),
+            [
+               ([Day.MON, Day.TUE, Day.WED, Day.THU, Day.FRI, Day.SAT, Day.SUN, 
+                 Day.MON, Day.TUE, Day.WED, Day.THU, Day.FRI, Day.SAT, Day.SUN, 
+                 Day.MON, Day.TUE], ["0800-1300"])
+            ]
+        )
+        token1 = ["MON", "-", "MON", "0800-1300"]
+        self.assertEqual(get_time_groups(token1, "250106", "250120"),
+            [           
+            ([Day.MON, Day.TUE, Day.WED, Day.THU, Day.FRI, Day.SAT, Day.SUN, 
+              Day.MON, Day.TUE, Day.WED, Day.THU, Day.FRI, Day.SAT, Day.SUN, 
+              Day.MON], ["0800-1300"])
+            ]  
+        )
 
 if __name__ == "__main__":
     unittest.main()

@@ -23,9 +23,29 @@ class Day(Enum):
     SUN = 7
     INVALID = 8
 
-def make_day_range(start: Day, end: Day) -> List[Day]:
+def parse_year(yy_mm_dd: str) -> datetime:
+    try:
+        # Attempt to parse the date string
+        return datetime.strptime(yy_mm_dd, "%y%m%d")
+    except ValueError:
+        # Raise a ValueError with a custom error message if parsing fails
+        raise ValueError(f"Invalid date format or invalid date: {yy_mm_dd}")
+
+def make_day_range(start: Day, end: Day, start_date: str, end_date: str) -> List[Day]:
+    start_dt = parse_year(start_date)
+    end_dt = parse_year(end_date)
+
     if start == Day.INVALID or end == Day.INVALID:
         return []
+    
+    if start_dt.weekday() + 1 == start.value and end_dt.weekday() + 1 == end.value:
+         # Special case: spanning multiple weeks
+        result = []
+        current_date = start_dt
+        while current_date <= end_dt:
+            result.append(Day(current_date.weekday() + 1))
+            current_date += timedelta(days=1)
+        return result
     
     if start == end:
         # When start and end are the same, return all days in order, wrapping around
@@ -138,7 +158,7 @@ def peek(tokens, index, offset=1):
     return None
 
 # Parsing Functions
-def get_time_groups(tokens: List[str]) -> List[Tuple[List[datetime], List[str]]]:
+def get_time_groups(tokens: List[str], start_dt: str, end_dt: str) -> List[Tuple[List[datetime], List[str]]]:
     class State(Enum):
         START = 1
         GOT_DAY = 2
@@ -203,7 +223,7 @@ def get_time_groups(tokens: List[str]) -> List[Tuple[List[datetime], List[str]]]
                     # Handle dash between days
                     start_day = current_dates[-1]
                     end_day = get_day(token)
-                    day_range = make_day_range(start_day, end_day)
+                    day_range = make_day_range(start_day, end_day, start_dt, end_dt)
                     current_dates.extend(day_range[1:])  # Avoid duplicating the first day
                     state = State.GOT_DAY
             elif token_type == TokenType.DATE:
