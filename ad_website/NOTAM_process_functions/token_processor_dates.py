@@ -33,7 +33,7 @@ def get_weekday_date(start_date: datetime, weekday: Day, assigned_dates: set) ->
 def format_date(date: datetime) -> str:
     return date.strftime('%a, %d %b %Y').upper()
 
-def process_weekdays_with_dates(start_date: str, end_date: str, notam_data: List[str]) -> List[str]:
+def process_weekdays_with_dates( notam_data: List[str], start_date: str, end_date: str) -> List[str]:
     start_date = parse_date_from_yyyymmdd(start_date)
     end_date = parse_date_from_yyyymmdd(end_date)
     

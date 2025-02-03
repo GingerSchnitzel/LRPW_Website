@@ -30,20 +30,18 @@ def process_tokens(tokens: List[str], start_date: str, end_date: str):
 
                     # Add the day entry only if a full date entry for the same day 
                     # doesn't already exist with the same time range.
-                    if not any(d.startswith(date_str) for d, t in notam_data):
+                    if not notam_data or notam_data[-1][0] != date_str or notam_data[-1][1] != time_ranges:
                         notam_data.append((date_str, time_ranges))
-                    continue
+                        continue
+
 
                 # Handle case where the token is a date range (e.g., "MON, 01 JAN").
                 elif ',' in date:
                     date_str = date
 
-                    # Remove any existing entry for the corresponding day-only entry 
-                    # with the same time range, as the full date takes precedence.
-                    notam_data = [
-                        (d, t) for d, t in notam_data
-                        if not (d == date_str[:3] and t == time_ranges)
-                    ]
+                     # Check if the last entry in the list has the same day and time range
+                    if notam_data and notam_data[-1][0] == date_str[:3] and notam_data[-1][1] == time_ranges:
+                        notam_data.pop()  # Remove the last entry
 
                 # Uncomment this section if handling full datetime objects is required.
                 '''

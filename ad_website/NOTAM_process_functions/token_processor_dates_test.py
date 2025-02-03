@@ -60,7 +60,7 @@ class TestDateProcessingFunctions(unittest.TestCase):
             "WED, 29 JAN 2025", "0900-1700",
         ]
 
-        result = process_weekdays_with_dates(start_date, end_date, notam_data)
+        result = process_weekdays_with_dates(notam_data, start_date, end_date)
         self.assertEqual(result, expected_output)
 
 if __name__ == "__main__":
