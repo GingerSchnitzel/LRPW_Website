@@ -1,4 +1,4 @@
-from parse_NOTAM_content import parse_NOTAM_content
+from .parse_NOTAM_content import parse_NOTAM_contents
 
 import unittest
 from datetime import datetime
@@ -29,14 +29,14 @@ class TestParseNOTAMContent(unittest.TestCase):
         ]
 
 
-        result = parse_NOTAM_content(self.start_date, self.end_date, content)
+        result = parse_NOTAM_contents(self.start_date, self.end_date, content)
         self.assertEqual(result, expected_output)
 
     def test_parse_NOTAM_content_empty_content(self):
         content = ""
         expected_output = []
 
-        result = parse_NOTAM_content(self.start_date, self.end_date, content)
+        result = parse_NOTAM_contents(self.start_date, self.end_date, content)
         self.assertEqual(result, expected_output)
 
     @patch('token_processor_days.process_tokens')
@@ -45,7 +45,7 @@ class TestParseNOTAMContent(unittest.TestCase):
         content = "Invalid content"
         mock_process_tokens.side_effect = ValueError("Invalid tokens")
         
-        result = parse_NOTAM_content(self.start_date, self.end_date, content)
+        result = parse_NOTAM_contents(self.start_date, self.end_date, content)
         self.assertEqual(result, [])
 
 if __name__ == '__main__':

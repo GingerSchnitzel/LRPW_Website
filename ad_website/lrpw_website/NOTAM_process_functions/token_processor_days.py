@@ -1,5 +1,5 @@
 from typing import List, Tuple, Optional
-from tokenizer import get_time_groups, Day
+from .tokenizer import get_time_groups, Day
 
 def process_tokens(tokens: List[str], start_date: str, end_date: str):
     """

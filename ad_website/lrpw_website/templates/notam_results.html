@@ -3,54 +3,80 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NOTAM Results</title>
+    <title>NOTAMs List</title>
     <style>
         body {
             font-family: Arial, sans-serif;
             margin: 20px;
-            padding: 0;
-            line-height: 1.6;
+            background-color: #f4f4f9;
         }
         h1 {
-            color: #333;
+            color: #4CAF50;
         }
-        .error {
-            color: red;
+        .notam-container {
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: white;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .notam-header {
+            font-size: 1.2em;
             font-weight: bold;
+            margin-bottom: 10px;
         }
-        .message {
-            color: blue;
+        .notam-details {
+            margin-bottom: 10px;
         }
-        .notam-details p {
-            margin: 5px 0;
+        .notam-text {
+            background-color: #f9f9f9;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .schedule-list {
+            list-style-type: none;
+            padding-left: 0;
+        }
+        .schedule-list li {
+            margin-bottom: 5px;
         }
     </style>
 </head>
 <body>
-    <h1>NOTAM Details</h1>
 
-    {% if notam_data.error %}
-        <p class="error">Error: {{ notam_data.error }}</p>
-    {% elif notam_data.message %}
-        <p class="message">{{ notam_data.message }}</p>
+    <h1>NOTAMs List</h1>
+
+    {% if notams %}
+        {% for notam in notams %}
+            <div class="notam-container">
+                <div class="notam-header">
+                    NOTAM {{ notam.series }} {{ notam.number }} ({{ notam.year }})
+                </div>
+                <div class="notam-details">
+                    <strong>Purpose:</strong> {{ notam.purpose }} <br>
+                    <strong>Start Date:</strong> {{ notam.start_date }} at {{ notam.start_hour }} <br>
+                    <strong>End Date:</strong> {{ notam.end_date }} at {{ notam.end_hour }} <br>
+                </div>
+                {% if notam.schedule %}
+                    <div class="schedule">
+                        <strong>Schedule:</strong>
+                        <ul class="schedule-list">
+                            {% for schedule in notam.schedule %}
+                                <li>{{ schedule }}</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                {% endif %}
+                <div class="notam-text">
+                    <strong>NOTAM Text:</strong> <br>
+                    {{ notam.notam_text }}
+                </div>
+            </div>
+        {% endfor %}
     {% else %}
-        <div class="notam-details">
-            <p><strong>NOTAM Text:</strong> {{ notam_data.notam_text }}</p>
-            <p><strong>Purpose:</strong> {{ notam_data.purpose }}</p>
-            <p><strong>Start Date:</strong> {{ notam_data.start_date }}</p>
-            <p><strong>Start Hour:</strong> {{ notam_data.start_hour }}</p>
-            <p><strong>End Date:</strong> {{ notam_data.end_date }}</p>
-            <p><strong>End Hour:</strong> {{ notam_data.end_hour }}</p>
-
-            {% if notam_data.schedule %}
-                <p><strong>Schedule:</strong></p>
-                <ul>
-                    {% for time_range in notam_data.schedule %}
-                        <li>{{ time_range.0 }} - {{ time_range.1 }}</li>
-                    {% endfor %}
-                </ul>
-            {% endif %}
-        </div>
+        <p>No NOTAMs available for today.</p>
     {% endif %}
+
 </body>
 </html>

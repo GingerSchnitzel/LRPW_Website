@@ -1,5 +1,5 @@
 import unittest
-from token_processor_days import process_tokens
+from .token_processor_days import process_tokens
 
 class TestProcessTokens(unittest.TestCase):
 

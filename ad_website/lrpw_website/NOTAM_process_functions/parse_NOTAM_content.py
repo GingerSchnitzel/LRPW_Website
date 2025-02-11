@@ -1,8 +1,8 @@
 import re
-from token_processor_days import process_tokens
-from token_processor_dates import process_weekdays_with_dates
+from .token_processor_days import process_tokens
+from .token_processor_dates import process_weekdays_with_dates
 
-def parse_NOTAM_content(start_date, end_date, content):
+def parse_NOTAM_contents(start_date, end_date, content):
     """
     Parses NOTAM content to extract day, date, and time ranges.
 

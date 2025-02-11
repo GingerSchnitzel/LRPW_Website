@@ -1,5 +1,5 @@
 import unittest
-from tokenizer import Day, TokenType,parse_year, make_day_range, get_day, is_time_range, is_date, parse_date, get_type, generate_date_range, get_time_groups
+from .tokenizer import Day, TokenType, parse_year, make_day_range, get_day, is_time_range, is_date, parse_date, get_type, generate_date_range, get_time_groups
 from datetime import datetime
 
 class TestFunctions(unittest.TestCase):

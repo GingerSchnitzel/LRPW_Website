@@ -1,7 +1,7 @@
 import unittest
 from datetime import datetime
 from typing import List
-from token_processor_dates import (  # Replace 'your_module' with the actual module name
+from .token_processor_dates import (  # Replace 'your_module' with the actual module name
     get_next_day_name,
     parse_date_from_yyyymmdd,
     get_weekday_date,

@@ -1,6 +1,7 @@
 from django.urls import path
-from .views import notam_view# Import your view
+from .views import fetch_notams, api_fetch_notams
 
 urlpatterns = [
-    path('scrape/', notam_view, name='scrape_notams'),  # Add the URL pattern
+    path('notams/', fetch_notams, name='fetch_notams'),
+    path('api/notams/', api_fetch_notams, name='api_fetch_notams'),
 ]

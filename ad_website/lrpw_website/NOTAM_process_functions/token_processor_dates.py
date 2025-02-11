@@ -1,7 +1,7 @@
 import re
 from datetime import datetime, timedelta
 from typing import List
-from tokenizer import Day, get_day
+from .tokenizer import Day, get_day
 
 def get_next_day_name(current_day_name):
     # Map of day names to get the next day
