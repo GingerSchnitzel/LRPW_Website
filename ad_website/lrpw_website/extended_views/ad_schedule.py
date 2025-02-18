@@ -39,8 +39,8 @@ def scrape_notams(NOTAMS_URL=NOTAM.URL):
             return {'message': f"Failed to fetch NOTAMs. Status code: {response.status_code}"}
 
         soup = BeautifulSoup(response.content, 'html.parser')
-        current_date = date.today() + timedelta(days=1)
-        current_YYMMDD_date = current_date.strftime("%y%m%d")  
+        #current_date = date.today()
+        #current_YYMMDD_date = current_date.strftime("%y%m%d")  
 
         for notam_entry in soup.find_all("div", style="font-family:monospace; font-size:large;"):
             notam_decoded = notam_entry.decode_contents().strip()
@@ -57,7 +57,7 @@ def scrape_notams(NOTAMS_URL=NOTAM.URL):
                 NOTAM_number = int(NOTAM_series[1:5])
                 NOTAM_year = int(NOTAM_series[-2:]) + 2000  
 
-                NOTAM_purpose = None
+                NOTAM_ad_open = False
                 NOTAM_start_date = None
                 NOTAM_end_date = None
                 NOTAM_start_hour = None
@@ -79,44 +79,60 @@ def scrape_notams(NOTAMS_URL=NOTAM.URL):
                         if identifier == 'D' and not NOTAM_schedule:
                             NOTAM_schedule = parse_NOTAM_contents(NOTAM_start_date, NOTAM_end_date, content)
 
-                        if identifier == 'E' and NOTAM_purpose is None:
+                        if identifier == 'E' and not NOTAM_schedule and NOTAM_ad_open == False:
                             NOTAM_section_E = content.strip()
+                            
                             if NOTAM.AD_CLOSED in NOTAM_section_E:
-                                NOTAM_purpose = NOTAM.AD_CLOSED
+                                NOTAM_ad_open = False
                             elif NOTAM.AD_OPEN in NOTAM_section_E:
-                                NOTAM_purpose = NOTAM.AD_OPEN
+                                NOTAM_ad_open = True
                             else:
                                 continue
-
-                            if not NOTAM_schedule:
-                                extracted_NOTAM_schedule = parse_NOTAM_contents(NOTAM_start_date, NOTAM_end_date, content)
+                            
+                            if NOTAM_section_E != NOTAM.AD_CLOSED:
+                                extracted_NOTAM_schedule = parse_NOTAM_contents(NOTAM_start_date, NOTAM_end_date, NOTAM_section_E)
                                 NOTAM_schedule = convert_schedule_to_eet(extracted_NOTAM_schedule)
+
+                            if not NOTAM_schedule and NOTAM_ad_open == False and NOTAM.AD_CLOSED == NOTAM_section_E:
+                                start_date_obj = datetime.strptime(NOTAM_start_date, "%y%m%d")
+                                formatted_start_date = start_date_obj.strftime("%a, %d %b %Y").upper()
+
+                                end_date_obj = datetime.strptime(NOTAM_end_date, "%y%m%d")
+                                formatted_end_date = end_date_obj.strftime("%a, %d %b %Y").upper()
+
+                                if NOTAM_start_date != NOTAM_end_date:
+                                    section_E_closed = f"{formatted_start_date} - {formatted_end_date}: CLSD"
+                                else:
+                                    section_E_closed = f"{formatted_start_date}: CLSD"
+                                
+                                NOTAM_schedule =  parse_NOTAM_contents(NOTAM_start_date, NOTAM_end_date, section_E_closed)
+                               
                     except Exception as e:
                         print(f"Error processing section {identifier}: {e}")
 
-                if NOTAM_start_date and NOTAM_end_date and NOTAM_purpose:
-                    if NOTAM_start_date <= current_YYMMDD_date <= NOTAM_end_date:
-                        notam_data = {
-                            'series': NOTAM_series,
-                            'number': NOTAM_number,
-                            'year': NOTAM_year,
-                            'purpose': NOTAM_purpose,
-                            'start_date': NOTAM_start_date,
-                            'start_hour': NOTAM_start_hour,
-                            'end_date': NOTAM_end_date,
-                            'end_hour': NOTAM_end_hour,
-                            'schedule': NOTAM_schedule,
-                            'notam_text': notam_text,
-                        }
+                if NOTAM_start_date and NOTAM_end_date and NOTAM_schedule:
+                    #if NOTAM_start_date <= current_YYMMDD_date <= NOTAM_end_date:
+                    notam_data = {
+                        'series': NOTAM_series,
+                        'number': NOTAM_number,
+                        'year': NOTAM_year,
+                        'ad_open': NOTAM_ad_open,
+                        'start_date': NOTAM_start_date,
+                        'start_hour': NOTAM_start_hour,
+                        'end_date': NOTAM_end_date,
+                        'end_hour': NOTAM_end_hour,
+                        'schedule': NOTAM_schedule,
+                        'notam_RAW_text': notam_text,
+                    }
 
-                        # Check if NOTAM already exists before saving
-                        existing_notam = NOTAM_model.objects.filter(series=NOTAM_series, number=NOTAM_number, year=NOTAM_year).first()
-                        if existing_notam:
-                            print(f"NOTAM {NOTAM_series} already exists in the database. Skipping...")
-                        else:
-                            new_notam = NOTAM_model(**notam_data)
-                            new_notam.save()
-                            print(f"Saved new NOTAM: {NOTAM_series}")
+                    # Check if NOTAM already exists before saving
+                    existing_notam = NOTAM_model.objects.filter(series=NOTAM_series, number=NOTAM_number, year=NOTAM_year).first()
+                    if existing_notam:
+                        print(f"NOTAM {NOTAM_series} already exists in the database. Skipping...")
+                    else:
+                        new_notam = NOTAM_model(**notam_data)
+                        new_notam.save()
+                        print(f"Saved new NOTAM: {NOTAM_series}")
 
         return {'message': 'NOTAM data processing completed.'}
 

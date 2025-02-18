@@ -41,6 +41,13 @@
         .schedule-list li {
             margin-bottom: 5px;
         }
+        .replaced {
+            color: #f44336;  /* Red color for replaced NOTAMs */
+        }
+        .ad-open {
+            color: #4CAF50;  /* Green color for open NOTAMs */
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
@@ -51,12 +58,19 @@
         {% for notam in notams %}
             <div class="notam-container">
                 <div class="notam-header">
-                    NOTAM {{ notam.series }} {{ notam.number }} ({{ notam.year }})
+                    NOTAM {{ notam.series }} 
+                    {% if notam.replaced %}
+                        <span class="replaced">(Replaced)</span>
+                    {% endif %}
                 </div>
                 <div class="notam-details">
-                    <strong>Purpose:</strong> {{ notam.purpose }} <br>
                     <strong>Start Date:</strong> {{ notam.start_date }} at {{ notam.start_hour }} <br>
                     <strong>End Date:</strong> {{ notam.end_date }} at {{ notam.end_hour }} <br>
+                    {% if notam.ad_open %}
+                        <span class="ad-open">AD Open</span> <br>
+                    {% else %}
+                        <span>AD Closed</span> <br>
+                    {% endif %}
                 </div>
                 {% if notam.schedule %}
                     <div class="schedule">
@@ -69,8 +83,8 @@
                     </div>
                 {% endif %}
                 <div class="notam-text">
-                    <strong>NOTAM Text:</strong> <br>
-                    {{ notam.notam_text }}
+                    <strong>NOTAM RAW Text:</strong> <br>
+                    {{ notam.notam_RAW_text }}
                 </div>
             </div>
         {% endfor %}
