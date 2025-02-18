@@ -1,5 +1,5 @@
 from django.db import models
-from datetime import datetime
+from datetime import datetime, timezone
 
 class NOTAM_model(models.Model):
     series = models.CharField(max_length=1)
@@ -31,7 +31,17 @@ class NOTAM_model(models.Model):
 
     def is_active(self):
         """
-        Checks if the NOTAM is currently active based on today's date.
+        Checks if the NOTAM is currently active based on today's date and the current hour in UTC.
         """
-        today = datetime.now().date().strftime('%y%m%d')
-        return self.end_date < today 
+        today = datetime.now(timezone.utc).strftime('%y%m%d')  # Get the current time in UTC as a timezone-aware datetime
+        current_hour = datetime.now(timezone.utc).strftime("%H%M")
+
+        # Ensure the end_date is in the same format as today (string) and compare
+        if self.end_date < today:
+            return False  # NOTAM is expired (date has passed)
+
+        # If the end_date is today, compare the hour and minute
+        if self.end_date == today and self.end_hour <= current_hour:
+            return False  # NOTAM is expired (end hour has passed)
+
+        return True  # NOTAM is active
