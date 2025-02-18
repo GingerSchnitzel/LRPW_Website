@@ -1,5 +1,6 @@
 from django.shortcuts import render
 from .extended_views.ad_schedule import scrape_notams
+from .extended_views.default_schedule import get_default_schedule
 from django.http import JsonResponse
 from datetime import date
 from .models import NOTAM_model
@@ -62,8 +63,14 @@ def fetch_notams(request):
     # The dictionary now contains only the most recent NOTAMs for each (start_date, end_date) group
     notams_to_display = list(unique_notams.values())
     
-    # Prepare the context for the template and pass the NOTAMs to display
-    return render(request, 'notam_results.html', {'notams': notams_to_display})
+    # Get the default aerodrome schedule in no other NOTAMs are available
+    schedule = get_default_schedule(notams)
+    
+    # Prepare the context for the template and pass the NOTAMs and schedule to display
+    return render(request, 'notam_results.html', {
+        'notams': notams_to_display,
+        'schedule': schedule  # Add the schedule to the context
+    })
 
 def merge_schedules(existing_schedule, new_schedule):
     """
