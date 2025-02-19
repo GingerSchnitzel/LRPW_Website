@@ -81,32 +81,28 @@ def merge_schedules(existing_schedule, new_schedule):
     if not existing_schedule:
         return new_schedule
     
-    # Split the existing and new schedules into individual entries
-    existing_entries = existing_schedule.split('\n')  # Assuming schedule entries are separated by newline
-    new_entries = new_schedule.split('\n')
-    
-    # Create a set for faster lookup
-    existing_dates = set(entry.split(' ')[0] for entry in existing_entries)  # Assuming the first part is the date (e.g., "Mon, 17.02.2025")
+    # Create a set for faster lookup, extracting the date part from each schedule entry
+    existing_dates = set(entry.split(' ')[0] for entry in existing_schedule)  # Assuming the first part is the date (e.g., "Mon, 17.02.2025")
     
     merged_schedule = []
 
     # Loop over the new entries
-    for new_entry in new_entries:
+    for new_entry in new_schedule:
         date_part = new_entry.split(' ')[0]  # Extract the date part (e.g., "Mon, 17.02.2025")
         
         # If the date is already in the existing schedule, update it
         if date_part in existing_dates:
             # Find the corresponding entry in the existing schedule and replace it
-            for i, existing_entry in enumerate(existing_entries):
+            for i, existing_entry in enumerate(existing_schedule):
                 if existing_entry.split(' ')[0] == date_part:
-                    existing_entries[i] = new_entry  # Replace the old schedule for this date
+                    existing_schedule[i] = new_entry  # Replace the old schedule for this date
                     break
         else:
             # If the date doesn't exist in the existing schedule, add it
             merged_schedule.append(new_entry)
     
     # Add any entries from the existing schedule that were not replaced
-    merged_schedule.extend(existing_entries)
+    merged_schedule.extend(existing_schedule)
     
-    return '\n'.join(merged_schedule)  # Join the list back into a string with newlines
+    return merged_schedule  # Return the merged schedule as a list of strings
 

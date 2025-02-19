@@ -1,7 +1,7 @@
 from datetime import datetime, timezone, timedelta
 from django.utils.timezone import make_aware
 
-def get_aerodrome_schedule(notams):
+def get_default_schedule(notams):
     """
     Determines the aerodrome's schedule based on NOTAMs or the default schedule.
     :param notams: A queryset of NOTAM_model instances valid for today.
@@ -14,8 +14,8 @@ def get_aerodrome_schedule(notams):
     # If there are valid NOTAMs for today, check if any specifies an opening schedule
     if notams.exists():
         for notam in notams:
-            start_datetime = datetime.strptime(notam.start_date + (notam.start_hour or '0000'), '%y%m%d%H%M')
-            end_datetime = datetime.strptime(notam.end_date + (notam.end_hour or '2359'), '%y%m%d%H%M')
+            start_datetime = datetime.strptime(notam.start_date + (notam.start_hour), '%y%m%d%H%M')
+            end_datetime = datetime.strptime(notam.end_date + (notam.end_hour), '%y%m%d%H%M')
             start_datetime = make_aware(start_datetime, timezone.utc)
             end_datetime = make_aware(end_datetime, timezone.utc)
 
@@ -49,4 +49,5 @@ def get_aerodrome_schedule(notams):
         open_hour_utc, close_hour_utc = 5, 13  # Winter (UTC+2 -> UTC)
 
     # Format and return the schedule
-    return f"{now_utc.strftime('%a, %d.%m.%Y')} {open_hour_utc:02}:00 - {close_hour_utc:02}:00"
+    return [f"{now_utc.strftime('%a, %d.%m.%Y')} {open_hour_utc:02}:00 - {close_hour_utc:02}:00"]
+

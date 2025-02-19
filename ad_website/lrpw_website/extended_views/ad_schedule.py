@@ -64,7 +64,7 @@ def scrape_notams(NOTAMS_URL=NOTAM.URL):
                 NOTAM_end_hour = None
                 NOTAM_schedule = []
 
-                sections = re.findall(r'([A-Z])\)\s*(.*?)(?=(?: [A-Z]\)|$))', notam_text)
+                sections = re.findall(r'([A-Z])\) ([\s\S]+?)(?=[A-Z]\) |$)', notam_text)
 
                 for identifier, content in sections:
                     try:
@@ -78,35 +78,36 @@ def scrape_notams(NOTAMS_URL=NOTAM.URL):
 
                         if identifier == 'D' and not NOTAM_schedule:
                             NOTAM_schedule = parse_NOTAM_contents(NOTAM_start_date, NOTAM_end_date, content)
-
-                        if identifier == 'E' and not NOTAM_schedule and NOTAM_ad_open == False:
+                            
+                        if identifier == 'E' and not NOTAM_schedule:
                             NOTAM_section_E = content.strip()
                             
                             if NOTAM.AD_CLOSED in NOTAM_section_E:
                                 NOTAM_ad_open = False
                             elif NOTAM.AD_OPEN in NOTAM_section_E:
                                 NOTAM_ad_open = True
-                            else:
-                                continue
-                            
-                            if NOTAM_section_E != NOTAM.AD_CLOSED:
-                                extracted_NOTAM_schedule = parse_NOTAM_contents(NOTAM_start_date, NOTAM_end_date, NOTAM_section_E)
+                                
+                            # Always try to extract schedule regardless of AD status
+                            extracted_NOTAM_schedule = parse_NOTAM_contents(NOTAM_start_date, NOTAM_end_date, NOTAM_section_E)
+                            if extracted_NOTAM_schedule:
                                 NOTAM_schedule = convert_schedule_to_eet(extracted_NOTAM_schedule)
-
-                            if not NOTAM_schedule and NOTAM_ad_open == False and NOTAM.AD_CLOSED == NOTAM_section_E:
+                            
+                            # Fallback for simple closed cases
+                            if not NOTAM_schedule and NOTAM.AD_CLOSED == NOTAM_section_E:
                                 start_date_obj = datetime.strptime(NOTAM_start_date, "%y%m%d")
                                 formatted_start_date = start_date_obj.strftime("%a, %d %b %Y").upper()
-
+                                
                                 end_date_obj = datetime.strptime(NOTAM_end_date, "%y%m%d")
                                 formatted_end_date = end_date_obj.strftime("%a, %d %b %Y").upper()
-
+                                
                                 if NOTAM_start_date != NOTAM_end_date:
                                     section_E_closed = f"{formatted_start_date} - {formatted_end_date}: CLSD"
                                 else:
                                     section_E_closed = f"{formatted_start_date}: CLSD"
                                 
-                                NOTAM_schedule =  parse_NOTAM_contents(NOTAM_start_date, NOTAM_end_date, section_E_closed)
-                               
+                                NOTAM_schedule = parse_NOTAM_contents(NOTAM_start_date, NOTAM_end_date, section_E_closed)
+                                                
+                        print(f"NOTAM schedule: {NOTAM_schedule}")
                     except Exception as e:
                         print(f"Error processing section {identifier}: {e}")
 
@@ -131,6 +132,7 @@ def scrape_notams(NOTAMS_URL=NOTAM.URL):
                         print(f"NOTAM {NOTAM_series} already exists in the database. Skipping...")
                     else:
                         new_notam = NOTAM_model(**notam_data)
+                        print(f"Saving NOTAM: {NOTAM_series}, {NOTAM_number}, {NOTAM_year}")
                         new_notam.save()
                         print(f"Saved new NOTAM: {NOTAM_series}")
 
@@ -139,4 +141,5 @@ def scrape_notams(NOTAMS_URL=NOTAM.URL):
     except Exception as e:
         print(f"An error occurred: {e}")
         traceback.print_exc()
+        raise
  

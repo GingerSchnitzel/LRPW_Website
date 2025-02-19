@@ -13,7 +13,7 @@
         h1 {
             color: #4CAF50;
         }
-        .notam-container {
+        .notam-container, .default-schedule {
             margin-bottom: 20px;
             padding: 15px;
             background-color: white;
@@ -42,10 +42,10 @@
             margin-bottom: 5px;
         }
         .replaced {
-            color: #f44336;  /* Red color for replaced NOTAMs */
+            color: #f44336;
         }
         .ad-open {
-            color: #4CAF50;  /* Green color for open NOTAMs */
+            color: #4CAF50;
             font-weight: bold;
         }
     </style>
@@ -66,11 +66,6 @@
                 <div class="notam-details">
                     <strong>Start Date:</strong> {{ notam.start_date }} at {{ notam.start_hour }} <br>
                     <strong>End Date:</strong> {{ notam.end_date }} at {{ notam.end_hour }} <br>
-                    {% if notam.ad_open %}
-                        <span class="ad-open">AD Open</span> <br>
-                    {% else %}
-                        <span>AD Closed</span> <br>
-                    {% endif %}
                 </div>
                 {% if notam.schedule %}
                     <div class="schedule">
@@ -90,6 +85,17 @@
         {% endfor %}
     {% else %}
         <p>No NOTAMs available for today.</p>
+
+        {% if schedule %}
+            <div class="default-schedule">
+                <h2>Default Aerodrome Schedule</h2>
+                <ul class="schedule-list">
+                    {% for time in schedule %}
+                        <li>{{ time }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        {% endif %}
     {% endif %}
 
 </body>
