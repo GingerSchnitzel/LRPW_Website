@@ -18,58 +18,53 @@ def api_fetch_notams(request):
     notam_list = list(notams.values())
     return JsonResponse({'notams': notam_list})
 
-def fetch_notams(request):
+def fetch_notams(request, target_date=None):
     """
-    Calls the NOTAM scraping function and displays the NOTAMs for today.
+    Calls the NOTAM scraping function and displays the NOTAMs for the specified or today's date.
     """
-    scrape_notams()  # Run the scraper to update NOTAMs in the database
+    if target_date:
+        current_date = target_date
+    else:
+        current_date = date.today()
     
-    current_date = date.today()
     today = current_date.strftime("%y%m%d")
     
-    # Get NOTAMs that are valid today
+    # Run the scraper to update NOTAMs in the database
+    scrape_notams()
+    
+    # Get NOTAMs that are valid for the specified or today's date
     notams = NOTAM_model.objects.filter(start_date__lte=today, end_date__gte=today)
     
     # Group NOTAMs by start_date and end_date
     unique_notams = {}
     
     for notam in notams:
-        # Key for grouping NOTAMs by start and end date
         key = (notam.start_date, notam.end_date)
         
-        # If this key already exists, compare and handle the logic
         if key in unique_notams:
             existing_notam = unique_notams[key]
             
-            # Case 1: The entire NOTAM is replaced (same dates, newer NOTAM)
             if notam.year > existing_notam.year or (notam.year == existing_notam.year and notam.number > existing_notam.number):
-                # Mark the older NOTAM as replaced
                 existing_notam.replaced = True
                 existing_notam.replaced_by = notam
                 existing_notam.save()
                 
-                # Replace the old NOTAM with the new one in the dictionary
                 unique_notams[key] = notam
-            
-            # Case 2: Only a part of the schedule is modified (same dates, schedule changed)
             elif notam.year == existing_notam.year and notam.number != existing_notam.number:
-                # Update the displayed schedule for the affected days (only modify display, no DB changes)
                 existing_notam.display_schedule = merge_schedules(existing_notam.schedule, notam.schedule)
-                existing_notam.display_schedule_updated = True  # Mark to indicate that it was updated
+                existing_notam.display_schedule_updated = True
         else:
-            # If this key does not exist, add the NOTAM to the dictionary
             unique_notams[key] = notam
     
-    # The dictionary now contains only the most recent NOTAMs for each (start_date, end_date) group
     notams_to_display = list(unique_notams.values())
     
-    # Get the default aerodrome schedule in no other NOTAMs are available
+    # Get the default aerodrome schedule if no relevant NOTAMs are available
     schedule = get_default_schedule(notams)
     
     # Prepare the context for the template and pass the NOTAMs and schedule to display
     return render(request, 'notam_results.html', {
         'notams': notams_to_display,
-        'schedule': schedule  # Add the schedule to the context
+        'schedule': schedule
     })
 
 def merge_schedules(existing_schedule, new_schedule):

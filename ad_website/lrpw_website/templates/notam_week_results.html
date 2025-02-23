@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weekly NOTAMs</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f4f4f9;
+        }
+        h1 {
+            color: #4CAF50;
+        }
+        .day-container {
+            margin-bottom: 30px;
+            padding: 15px;
+            background-color: white;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .notam-container {
+            margin-bottom: 15px;
+            padding: 10px;
+            background-color: #f9f9f9;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .notam-header {
+            font-size: 1.2em;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .notam-text {
+            background-color: white;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .schedule-list {
+            list-style-type: none;
+            padding-left: 0;
+        }
+        .schedule-list li {
+            margin-bottom: 5px;
+        }
+        .replaced {
+            color: #f44336;
+        }
+    </style>
+</head>
+<body>
+    <h1>Weekly NOTAMs</h1>
+
+    {% for date, notams in week_notams.items %}
+        <div class="day-container">
+            <h2>NOTAMs for {{ date }}</h2>
+            
+            {% if notams %}
+                {% for notam in notams %}
+                    <div class="notam-container">
+                        <div class="notam-header">
+                            NOTAM {{ notam.series }}
+                            {% if notam.replaced %}
+                                <span class="replaced">(Replaced)</span>
+                            {% endif %}
+                        </div>
+                        <div>
+                            <strong>Start Date:</strong> {{ notam.start_date }} at {{ notam.start_hour }} <br>
+                            <strong>End Date:</strong> {{ notam.end_date }} at {{ notam.end_hour }} <br>
+                        </div>
+                        {% if notam.schedule %}
+                            <div>
+                                <strong>Schedule:</strong>
+                                <ul class="schedule-list">
+                                    {% for schedule in notam.schedule %}
+                                        <li>{{ schedule }}</li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        {% endif %}
+                        <div class="notam-text">
+                            <strong>NOTAM RAW Text:</strong> <br>
+                            {{ notam.notam_RAW_text }}
+                        </div>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <p>No NOTAMs available for this day.</p>
+            {% endif %}
+        </div>
+    {% endfor %}
+</body>
+</html>
