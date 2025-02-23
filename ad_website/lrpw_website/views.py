@@ -67,6 +67,20 @@ def fetch_notams(request, target_date=None):
         'schedule': schedule
     })
 
+def fetch_notams_for_week(request):
+    """
+    Calls fetch_notams() for each day in the current week and collects results.
+    """
+    start_date = date.today()  # Start from today
+    week_notams = {}
+
+    for i in range(7):  # Loop through the next 7 days
+        target_date = start_date + timedelta(days=i)
+        response = fetch_notams(request, target_date)  # Call fetch_notams for the specific date
+        week_notams[target_date.strftime("%y%m%d")] = response  # Store results by date
+
+    return render(request, 'notam_week_results.html', {'week_notams': week_notams})
+
 def merge_schedules(existing_schedule, new_schedule):
     """
     Merge the new schedule with the existing schedule.
