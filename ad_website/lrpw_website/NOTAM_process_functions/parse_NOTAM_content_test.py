@@ -10,7 +10,7 @@ class TestParseNOTAMContent(unittest.TestCase):
     def setUp(self):
         # Set up any necessary data for the tests
         self.start_date = "250131"
-        self.end_date = "250210"
+        self.end_date = "251231"
 
     def test_parse_NOTAM_content_valid(self):
         content = "TEMPORARY CHANGE OF AD ADMINISTRATION OPS HOURS AS FLW: FRI, 31 JAN: 0800-1500 SAT - TUE: CLSD WED, 05 FEB: 0800-1300 THU, 06 FEB: 0800-1300 FRI, 07 FEB: 0800-1300 SAT, 08 FEB: CLSD SUN, 09 FEB: CLSD MON, 10 FEB: 0800-1300) "
@@ -27,10 +27,13 @@ class TestParseNOTAMContent(unittest.TestCase):
              "SUN, 09 FEB 2025", "CLSD",
              "MON, 10 FEB 2025", "0800-1300" 
         ]
-
-
         result = parse_NOTAM_contents(self.start_date, self.end_date, content)
         self.assertEqual(result, expected_output)
+        
+        content1 = "TEMPORARY CHANGE OF AD ADMINISTRATION OPS HOURS AD CLSD: SAT, 16 SEP 2023: 1130-1300"
+        expected1 = ["SAT, 16 SEP 2025", "1130-1300"]
+        result1 = parse_NOTAM_contents(self.start_date, self.end_date, content1)
+        self.assertEqual(result1, expected1)
 
     def test_parse_NOTAM_content_empty_content(self):
         content = ""

@@ -53,12 +53,12 @@
 <body>
     <h1>Weekly NOTAMs</h1>
 
-    {% for date, notams in week_notams.items %}
+    {% for date, data in week_notams.items %}
         <div class="day-container">
             <h2>NOTAMs for {{ date }}</h2>
             
-            {% if notams %}
-                {% for notam in notams %}
+            {% if data.notams %}
+                {% for notam in data.notams %}
                     <div class="notam-container">
                         <div class="notam-header">
                             NOTAM {{ notam.series }}
@@ -88,6 +88,16 @@
                 {% endfor %}
             {% else %}
                 <p>No NOTAMs available for this day.</p>
+                {% if data.schedule %}
+                    <div>
+                        <strong>Default Aerodrome Schedule:</strong>
+                        <ul class="schedule-list">
+                            {% for schedule in data.schedule %}
+                                <li>{{ schedule }}</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                {% endif %}
             {% endif %}
         </div>
     {% endfor %}

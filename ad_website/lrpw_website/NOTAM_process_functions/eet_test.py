@@ -55,5 +55,13 @@ class TestScheduleConversion(unittest.TestCase):
         ]
         self.assertEqual(convert_schedule_to_eet(schedule_5), expected_5)
 
+        schedule_6 = ['THU, 01 JUN 2023', '0400-1200', 'FRI, 02 JUN 2023', '0400-1200', 'MON, 05 JUN 2023', '0400-1200']
+        expected_6 = [
+            ["Thu, 01.06.2023", "07:00 - 15:00"],
+            ["Fri, 02.06.2023", "07:00 - 15:00"],
+            ["Mon, 05.06.2023", "07:00 - 15:00"]
+        ]
+        self.assertEqual(convert_schedule_to_eet(schedule_6), expected_6)
+
 if __name__ == '__main__':
     unittest.main()

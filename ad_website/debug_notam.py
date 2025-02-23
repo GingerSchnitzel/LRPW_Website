@@ -18,24 +18,37 @@ from lrpw_website.models import NOTAM_model
 # Mock the HTML response
 mock_html = """
 <div style="font-family:monospace; font-size:large;">
-    (A0739/25 NOTAMR A0672/25
-    Q) LRBB/QFAAH/IV/BO /A /000/999/4422N02556E005
-    A) LRCN B) 2502170550 C) 2502242359
-    E) TEMPORARY CHANGE OF AD ADMINISTRATION OPS HOURS AS FLW:
-    MON, 17 FEB: CLSD
-    TUE, 18 FEB: CLSD
-    WED, 19 FEB: CLSD
-    THU, 20 FEB: CLSD
-    FRI, 21 FEB: CLSD
-    SAT, 22 FEB: CLSD
-    SUN, 23 FEB: CLSD
-    MON, 24 FEB: CLSD)
-</div>
+    A0100/2025	LRCN	
+(A0100/25 NOTAMR A0083/25
+Q) LRBB/QFAAH/IV/BO /A /000/999/4422N02556E005
+A) LRCN B) 2501101223 C) 2501201300
+E) TEMPORARY CHANGE OF AD ADMINISTRATION OPS HOURS AS FLW:
+FRI, 10 JAN 2025: 0800-1500
+SAT, 11 JAN 2025: CLSD
+SUN, 12 JAN 2025: CLSD
+MON, 13 JAN 2025: 0800-1300
+TUE, 14 JAN 2025: 0800-1300
+WED, 15 JAN 2025: 0800-1300
+THU, 16 JAN 2025: 0800-1300
+FRI, 17 JAN 2025: 0800-1300
+SAT, 18 JAN 2025: CLSD
+SUN, 19 JAN 2025: CLSD
+MON, 20 JAN 2025: 0800-1300)
+"""
+
+mock_html1 = """
+<div style="font-family:monospace; font-size:large;">
+A4368/23 NOTAMN
+Q) LRBB/QFAAH/IV/BO /A /000/999/4455N02558E005
+A) LRPW B) 2309161147 C) 2309161300
+E) TEMPORARY CHANGE OF AD ADMINISTRATION OPS HOURS
+AD CLSD:
+SAT, 16 SEP 2023: 1130-1300
 """
 
 def debug_notam_parsing():
     # Parse the HTML using BeautifulSoup
-    soup = BeautifulSoup(mock_html, 'html.parser')
+    soup = BeautifulSoup(mock_html1, 'html.parser')
     
     print("1. Finding NOTAM entries...")
     notam_entries = soup.find_all("div", style="font-family:monospace; font-size:large;")
@@ -63,11 +76,13 @@ def debug_notam_parsing():
                 
                 # Initialize variables
                 NOTAM_ad_open = False
+                mixed_open_close = False
+                section_D_parsed = False
                 NOTAM_start_date = None
                 NOTAM_end_date = None
                 NOTAM_start_hour = None
                 NOTAM_end_hour = None
-                NOTAM_schedule = []
+                NOTAM_schedule = None
                 
                 # Parse sections
                 print("5. Parsing NOTAM sections...")
@@ -88,52 +103,79 @@ def debug_notam_parsing():
                             print(f"   Extracted end date: {NOTAM_end_date}, hour: {NOTAM_end_hour}")
                             
                         if identifier == 'D' and not NOTAM_schedule:
-                            print("   Attempting to parse schedule from section D")
-                            NOTAM_schedule = parse_NOTAM_contents(NOTAM_start_date, NOTAM_end_date, content)
-                            print(f"   Section D schedule: {NOTAM_schedule}")
+                            if content.strip():
+                                print("   Attempting to parse schedule from section D")
+                                extracted_schedule = parse_NOTAM_contents(NOTAM_start_date, NOTAM_end_date, content)
+                                print(f"   Raw extracted schedule: {extracted_schedule}")
+                                NOTAM_schedule = convert_schedule_to_eet(extracted_schedule)
+                                print(f"   Converted schedule: {NOTAM_schedule}")
+                                # Add "OPEN" as the first element in the schedule list
+                                if NOTAM_schedule:
+                                    NOTAM_schedule = [["CLOSED"] + schedule_item for schedule_item in NOTAM_schedule]  # Prepend "CLOSED" to each inner list
+                                print(f"   Section D schedule: {NOTAM_schedule}")
+                                section_D_parsed = True
                             
                         if identifier == 'E' and not NOTAM_schedule:
-                            NOTAM_section_E = content.strip()
-                            print(f"   Section E content: {NOTAM_section_E[:100]}...")
-                            
-                            # Special handling for E section
-                            print(f"   Contains 'AD CLSD': {'AD CLSD' in NOTAM_section_E}")
-                            print(f"   Contains 'TEMPORARY CHANGE': {'TEMPORARY CHANGE OF AD ADMINISTRATION OPS HOURS' in NOTAM_section_E}")
-                            
-                            if "AD CLSD" in NOTAM_section_E:
-                                NOTAM_ad_open = False
-                                print("   Setting AD status: CLOSED")
-                            elif "TEMPORARY CHANGE OF AD ADMINISTRATION OPS HOURS" in NOTAM_section_E:
-                                NOTAM_ad_open = True
-                                print("   Setting AD status: OPEN (temporary change)")
-                            
-                            print("   Attempting to parse schedule from section E")
-                            extracted_NOTAM_schedule = parse_NOTAM_contents(NOTAM_start_date, NOTAM_end_date, NOTAM_section_E)
-                            print(f"   Raw extracted schedule: {extracted_NOTAM_schedule}")
-                            
-                            if extracted_NOTAM_schedule:
-                                print("   Converting schedule to EET")
-                                NOTAM_schedule = convert_schedule_to_eet(extracted_NOTAM_schedule)
-                                print(f"   Converted schedule: {NOTAM_schedule}")
-                            
-                            # Special case handling
-                            if not NOTAM_schedule and NOTAM_ad_open == False and "AD CLSD" in NOTAM_section_E:
-                                print("   Creating fallback schedule for AD CLSD")
+                            if not NOTAM_schedule or not section_D_parsed:
+                                NOTAM_section_E = content.strip()
+                                print(f"   Section E content: {NOTAM_section_E[:100]}...")
                                 
-                                from datetime import datetime
-                                start_date_obj = datetime.strptime(NOTAM_start_date, "%y%m%d")
-                                formatted_start_date = start_date_obj.strftime("%a, %d %b %Y").upper()
+                                # Special handling for E section
+                                print(f"   Contains 'AD CLSD': {'AD CLSD' in NOTAM_section_E}")
+                                print(f"   Contains 'TEMPORARY CHANGE': {'TEMPORARY CHANGE OF AD ADMINISTRATION OPS HOURS' in NOTAM_section_E}")
                                 
-                                end_date_obj = datetime.strptime(NOTAM_end_date, "%y%m%d")
-                                formatted_end_date = end_date_obj.strftime("%a, %d %b %Y").upper()
+                                if "AD CLSD" in NOTAM_section_E:
+                                    NOTAM_ad_open = False
+                                    print("   Setting AD status: CLOSED")
+                                elif "TEMPORARY CHANGE OF AD ADMINISTRATION OPS HOURS" in NOTAM_section_E:
+                                    NOTAM_ad_open = True
+                                    print("   Setting AD status: OPEN (temporary change)")
+                                if "TEMPORARY CHANGE OF AD ADMINISTRATION OPS HOURS" in NOTAM_section_E and "AD CLSD" in NOTAM_section_E:
+                                    mixed_open_close = True
+                                    print("    Ad status: mixed")
+
+                                if NOTAM_section_E != "AD CLSD":
+                                    print("   Attempting to parse schedule from section E")
+                                    extracted_NOTAM_schedule = parse_NOTAM_contents(NOTAM_start_date, NOTAM_end_date, NOTAM_section_E)
+                                    print(f"   Raw extracted schedule: {extracted_NOTAM_schedule}")
+                                    
+                                    if extracted_NOTAM_schedule:
+                                        print("   Converting schedule to EET")
+                                        NOTAM_schedule = convert_schedule_to_eet(extracted_NOTAM_schedule)
+                                        print(f"   Converted schedule: {NOTAM_schedule}")
                                 
-                                if NOTAM_start_date != NOTAM_end_date:
-                                    section_E_closed = f"{formatted_start_date} - {formatted_end_date}: CLSD"
-                                else:
-                                    section_E_closed = f"{formatted_start_date}: CLSD"
+                                # Special case handling
+                                if not NOTAM_schedule and NOTAM_ad_open == False and "AD CLSD" == NOTAM_section_E :
+                                    print("   Creating fallback schedule for AD CLSD")
+                                    
+                                    from datetime import datetime
+                                    start_date_obj = datetime.strptime(NOTAM_start_date, "%y%m%d")
+                                    formatted_start_date = start_date_obj.strftime("%a, %d %b %Y").upper()
+                                    
+                                    end_date_obj = datetime.strptime(NOTAM_end_date, "%y%m%d")
+                                    formatted_end_date = end_date_obj.strftime("%a, %d %b %Y").upper()
+                                    
+                                    if NOTAM_start_date != NOTAM_end_date:
+                                        section_E_closed = f"{formatted_start_date} - {formatted_end_date}: CLSD"
+                                    else:
+                                        section_E_closed = f"{formatted_start_date}: CLSD"
+                                    
+                                    print(f"   Fallback section E: {section_E_closed}")
+                                    NOTAM_schedule = convert_schedule_to_eet(parse_NOTAM_contents(NOTAM_start_date, NOTAM_end_date, section_E_closed))
                                 
-                                print(f"   Fallback section E: {section_E_closed}")
-                                NOTAM_schedule = parse_NOTAM_contents(NOTAM_start_date, NOTAM_end_date, section_E_closed)
+                                print(f"Before update: {NOTAM_schedule}")
+                                if NOTAM_schedule:
+                                    for i, schedule_item in enumerate(NOTAM_schedule):
+                                        # Ensure the schedule_item is a list with at least 2 elements before proceeding
+                                        if isinstance(schedule_item, list) and len(schedule_item) >= 2:
+                                            # Check if "CLSD" is in the second element (schedule_item[1])
+                                            if "CLSD" in schedule_item[1] or mixed_open_close == True:
+                                                NOTAM_schedule[i] = ["CLOSED"] + schedule_item  # Prepend "CLOSED" to the list
+                                            else:
+                                                NOTAM_schedule[i] = ["OPEN"] + schedule_item  # Prepend "OPEN" to the list
+                                        else:
+                                            print(f"   Skipping invalid schedule item: {schedule_item}")
+                                print(f"After update: {NOTAM_schedule}")
                                 print(f"   Fallback schedule: {NOTAM_schedule}")
                     
                     except Exception as e:
@@ -176,7 +218,7 @@ if __name__ == "__main__":
     with patch('requests.Session.get') as mock_get:
         mock_response = MagicMock()
         mock_response.status_code = 200
-        mock_response.content = mock_html.encode("utf-8")
+        mock_response.content = mock_html1.encode("utf-8")
         mock_get.return_value = mock_response
         
         # Skip certificate verification for debugging

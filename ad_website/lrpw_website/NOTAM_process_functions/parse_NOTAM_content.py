@@ -23,7 +23,7 @@ def parse_NOTAM_contents(start_date, end_date, content):
             r'(?:\d{4}(?!-\d{4}))?)|'  # Optional 4-digit year (not followed by a range)
             r'((?:MON|TUE|WED|THU|FRI|SAT|SUN))|'  # Day of the week
             r'(\d{4}-\d{4})|'  # Time range format (e.g., 0800-1500)
-            r'(CLSD)|'  # CLSD keyword
+            r'((?<!AD )CLSD)|'  # CLSD keyword
             r'(-)'  # Dash
 
         )

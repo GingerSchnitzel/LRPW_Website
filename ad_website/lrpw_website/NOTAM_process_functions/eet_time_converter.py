@@ -16,7 +16,7 @@ def convert_schedule_to_eet(schedule):
         time_ranges = []
 
         # Collect all time ranges for the same date
-        while i < len(schedule) and not schedule[i].endswith("2025") and schedule[i] not in ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"]:
+        while i < len(schedule) and schedule[i][:3] not in ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"]:
             time_ranges.append(schedule[i])
             i += 1
 

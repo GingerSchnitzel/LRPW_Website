@@ -6,6 +6,43 @@ from datetime import date
 from .models import NOTAM_model
 from datetime import  timedelta
 
+def get_notams_for_date(target_date):
+    """
+    Retrieves NOTAMs valid for the given date and determines the schedule.
+    """
+    target_date_str = target_date.strftime("%y%m%d")
+
+    # Fetch NOTAMs that are valid for this date
+    notams = NOTAM_model.objects.filter(start_date__lte=target_date_str, end_date__gte=target_date_str)
+
+    # Group NOTAMs by start_date and end_date
+    unique_notams = {}
+
+    for notam in notams:
+        key = (notam.start_date, notam.end_date)
+
+        if key in unique_notams:
+            existing_notam = unique_notams[key]
+
+            # Check if the new NOTAM replaces the existing one
+            if notam.year > existing_notam.year or (notam.year == existing_notam.year and notam.number > existing_notam.number):
+                existing_notam.replaced = True
+                existing_notam.replaced_by = notam
+                existing_notam.save()
+                unique_notams[key] = notam
+            elif notam.year == existing_notam.year and notam.number != existing_notam.number:
+                existing_notam.display_schedule = merge_schedules(existing_notam.schedule, notam.schedule)
+                existing_notam.display_schedule_updated = True
+        else:
+            unique_notams[key] = notam
+
+    notams_to_display = list(unique_notams.values())
+
+    # Get the default aerodrome schedule if no NOTAMs are available
+    schedule = get_default_schedule(notams)
+
+    return notams_to_display, schedule
+
 def api_fetch_notams(request):
     """
     API endpoint to fetch NOTAMs in JSON format.
@@ -20,64 +57,38 @@ def api_fetch_notams(request):
 
 def fetch_notams(request, target_date=None):
     """
-    Calls the NOTAM scraping function and displays the NOTAMs for the specified or today's date.
+    Calls the NOTAM scraping function and displays NOTAMs for the specified or today's date.
     """
-    if target_date:
-        current_date = target_date
-    else:
-        current_date = date.today()
-    
-    today = current_date.strftime("%y%m%d")
-    
-    # Run the scraper to update NOTAMs in the database
-    scrape_notams()
-    
-    # Get NOTAMs that are valid for the specified or today's date
-    notams = NOTAM_model.objects.filter(start_date__lte=today, end_date__gte=today)
-    
-    # Group NOTAMs by start_date and end_date
-    unique_notams = {}
-    
-    for notam in notams:
-        key = (notam.start_date, notam.end_date)
-        
-        if key in unique_notams:
-            existing_notam = unique_notams[key]
-            
-            if notam.year > existing_notam.year or (notam.year == existing_notam.year and notam.number > existing_notam.number):
-                existing_notam.replaced = True
-                existing_notam.replaced_by = notam
-                existing_notam.save()
-                
-                unique_notams[key] = notam
-            elif notam.year == existing_notam.year and notam.number != existing_notam.number:
-                existing_notam.display_schedule = merge_schedules(existing_notam.schedule, notam.schedule)
-                existing_notam.display_schedule_updated = True
-        else:
-            unique_notams[key] = notam
-    
-    notams_to_display = list(unique_notams.values())
-    
-    # Get the default aerodrome schedule if no relevant NOTAMs are available
-    schedule = get_default_schedule(notams)
-    
-    # Prepare the context for the template and pass the NOTAMs and schedule to display
+    scrape_notams()  # Update the database with fresh NOTAMs
+
+    if target_date is None:
+        target_date = date.today()
+
+    notams, schedule = get_notams_for_date(target_date)
+
     return render(request, 'notam_results.html', {
-        'notams': notams_to_display,
+        'notams': notams,
         'schedule': schedule
     })
 
 def fetch_notams_for_week(request):
     """
-    Calls fetch_notams() for each day in the current week and collects results.
+    Fetches NOTAMs for each day in the current week and collects results.
     """
-    start_date = date.today()  # Start from today
+    scrape_notams()  # Update NOTAMs in the database
+
+    start_date = date.today()
     week_notams = {}
 
     for i in range(7):  # Loop through the next 7 days
         target_date = start_date + timedelta(days=i)
-        response = fetch_notams(request, target_date)  # Call fetch_notams for the specific date
-        week_notams[target_date.strftime("%y%m%d")] = response  # Store results by date
+        notams, schedule = get_notams_for_date(target_date)
+
+        # Store results by date
+        week_notams[target_date.strftime("%a, %d.%m.%Y")] = {
+            "notams": notams,
+            "schedule": schedule
+        }
 
     return render(request, 'notam_week_results.html', {'week_notams': week_notams})
 

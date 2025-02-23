@@ -56,8 +56,9 @@ def scrape_notams(NOTAMS_URL=NOTAM.URL):
                 NOTAM_series = str(match.group(0))
                 NOTAM_number = int(NOTAM_series[1:5])
                 NOTAM_year = int(NOTAM_series[-2:]) + 2000  
-
                 NOTAM_ad_open = False
+                mixed_open_closed = False
+                section_D_parsed = False
                 NOTAM_start_date = None
                 NOTAM_end_date = None
                 NOTAM_start_hour = None
@@ -77,36 +78,61 @@ def scrape_notams(NOTAMS_URL=NOTAM.URL):
                             NOTAM_end_hour = content.strip()[6:]
 
                         if identifier == 'D' and not NOTAM_schedule:
-                            NOTAM_schedule = parse_NOTAM_contents(NOTAM_start_date, NOTAM_end_date, content)
+                            if content.strip():
+                                extracted_schedule = parse_NOTAM_contents(NOTAM_start_date, NOTAM_end_date, content)
+                                NOTAM_schedule = convert_schedule_to_eet(extracted_schedule)
+
+                                # Add "OPEN" as the first element in the schedule list
+                                if NOTAM_schedule:
+                                    NOTAM_schedule = [["CLOSED"] + schedule_item for schedule_item in NOTAM_schedule]  # Prepend "CLOSED" to each inner list
+                                
+                                section_D_parsed = True
                             
                         if identifier == 'E' and not NOTAM_schedule:
-                            NOTAM_section_E = content.strip()
-                            
-                            if NOTAM.AD_CLOSED in NOTAM_section_E:
-                                NOTAM_ad_open = False
-                            elif NOTAM.AD_OPEN in NOTAM_section_E:
-                                NOTAM_ad_open = True
+                            if not NOTAM_schedule or not section_D_parsed:
+                                NOTAM_section_E = content.strip()
+
+                                if NOTAM.AD_CLOSED in NOTAM_section_E:
+                                    NOTAM_ad_open = False
+                                elif NOTAM.AD_OPEN in NOTAM_section_E:
+                                    NOTAM_ad_open = True
+                                    
+                                if NOTAM.AD_CLOSED in NOTAM_section_E and NOTAM.AD_OPEN in NOTAM_section_E:
+                                    mixed_open_closed = True
+
+                                   
+                                if NOTAM_section_E != NOTAM.AD_CLOSED:
+                                    extracted_NOTAM_schedule = parse_NOTAM_contents(NOTAM_start_date, NOTAM_end_date, NOTAM_section_E)
+                                    if extracted_NOTAM_schedule:
+                                        NOTAM_schedule = convert_schedule_to_eet(extracted_NOTAM_schedule)
                                 
-                            # Always try to extract schedule regardless of AD status
-                            extracted_NOTAM_schedule = parse_NOTAM_contents(NOTAM_start_date, NOTAM_end_date, NOTAM_section_E)
-                            if extracted_NOTAM_schedule:
-                                NOTAM_schedule = convert_schedule_to_eet(extracted_NOTAM_schedule)
-                            
-                            # Fallback for simple closed cases
-                            if not NOTAM_schedule and NOTAM.AD_CLOSED == NOTAM_section_E:
-                                start_date_obj = datetime.strptime(NOTAM_start_date, "%y%m%d")
-                                formatted_start_date = start_date_obj.strftime("%a, %d %b %Y").upper()
-                                
-                                end_date_obj = datetime.strptime(NOTAM_end_date, "%y%m%d")
-                                formatted_end_date = end_date_obj.strftime("%a, %d %b %Y").upper()
-                                
-                                if NOTAM_start_date != NOTAM_end_date:
-                                    section_E_closed = f"{formatted_start_date} - {formatted_end_date}: CLSD"
-                                else:
-                                    section_E_closed = f"{formatted_start_date}: CLSD"
-                                
-                                NOTAM_schedule = parse_NOTAM_contents(NOTAM_start_date, NOTAM_end_date, section_E_closed)
-                                                
+                                # Fallback for simple closed cases
+                                if not NOTAM_schedule and NOTAM.AD_CLOSED == NOTAM_section_E:
+                                    start_date_obj = datetime.strptime(NOTAM_start_date, "%y%m%d")
+                                    formatted_start_date = start_date_obj.strftime("%a, %d %b %Y").upper()
+                                    
+                                    end_date_obj = datetime.strptime(NOTAM_end_date, "%y%m%d")
+                                    formatted_end_date = end_date_obj.strftime("%a, %d %b %Y").upper()
+                                    
+                                    if NOTAM_start_date != NOTAM_end_date:
+                                        section_E_closed = f"{formatted_start_date} - {formatted_end_date}: CLSD"
+                                    else:
+                                        section_E_closed = f"{formatted_start_date}: CLSD"
+                                    
+                                    NOTAM_schedule = convert_schedule_to_eet(parse_NOTAM_contents(NOTAM_start_date, NOTAM_end_date, section_E_closed))
+
+                                if NOTAM_schedule:
+                                    for i, schedule_item in enumerate(NOTAM_schedule):
+                                        # Ensure the schedule_item is a list with at least 2 elements before proceeding
+                                        if isinstance(schedule_item, list) and len(schedule_item) >= 2:
+                                            # Check if "CLSD" is in the second element (schedule_item[1])
+                                            if "CLSD" in schedule_item[1] or mixed_open_closed == True:
+                                                NOTAM_schedule[i] = ["CLOSED"] + schedule_item  # Prepend "CLOSED" to the list
+                                            else:
+                                                NOTAM_schedule[i] = ["OPEN"] + schedule_item  # Prepend "OPEN" to the list
+                                        else:
+                                            print(f"   Skipping invalid schedule item: {schedule_item}")
+                        
                         print(f"NOTAM schedule: {NOTAM_schedule}")
                     except Exception as e:
                         print(f"Error processing section {identifier}: {e}")
