@@ -39,7 +39,7 @@ def get_notams_for_date(target_date):
     notams_to_display = list(unique_notams.values())
 
     # Get the default aerodrome schedule if no NOTAMs are available
-    schedule = get_default_schedule(notams)
+    schedule = get_default_schedule(notams, target_date)
 
     return notams_to_display, schedule
 

@@ -1,16 +1,17 @@
 from datetime import datetime, timezone, timedelta
 from django.utils.timezone import make_aware
 
-def get_default_schedule(notams):
+def get_default_schedule(notams, date):
     """
     Determines the aerodrome's schedule based on NOTAMs or the default schedule.
-    :param notams: A queryset of NOTAM_model instances valid for today.
+    :param notams: A queryset of NOTAM_model instances valid for the given date.
+    :param date: A datetime.date object representing the day for which to get the schedule.
     :return: List containing a single formatted schedule string.
     """
-    now_utc = datetime.now(timezone.utc)
-    weekday = now_utc.weekday()  # Monday = 0, Sunday = 6
+    target_datetime = datetime(date.year, date.month, date.day, tzinfo=timezone.utc)
+    weekday = target_datetime.weekday()  # Monday = 0, Sunday = 6
 
-    # If there are valid NOTAMs for today, check if any specifies an opening schedule
+    # Check NOTAMs for the given date
     if notams.exists():
         for notam in notams:
             start_datetime = datetime.strptime(notam.start_date + notam.start_hour, '%y%m%d%H%M')
@@ -18,21 +19,21 @@ def get_default_schedule(notams):
             start_datetime = make_aware(start_datetime, timezone.utc)
             end_datetime = make_aware(end_datetime, timezone.utc)
 
-            if start_datetime <= now_utc <= end_datetime:
+            if start_datetime.date() <= date <= end_datetime.date():
                 if notam.ad_open:
-                    return [f"{now_utc.strftime('%a, %d.%m.%Y')} OPEN"]
+                    return [f"{target_datetime.strftime('%a, %d.%m.%Y')} OPEN"]
                 else:
-                    return [f"{now_utc.strftime('%a, %d.%m.%Y')}, CLSD"]
+                    return [f"{target_datetime.strftime('%a, %d.%m.%Y')}, CLSD"]
 
     # If no NOTAMs exist, use the default schedule
     if weekday >= 5:  # Saturday (5) or Sunday (6) => Aerodrome is closed
-        return [f"{now_utc.strftime('%a, %d.%m.%Y')}, CLSD"]
+        return [f"{target_datetime.strftime('%a, %d.%m.%Y')}, CLSD"]
 
-    # Determine if we are in winter (EET, UTC+2) or summer (EEST, UTC+3)
-    last_sunday_march = max(day for day in range(25, 32) if datetime(now_utc.year, 3, day).weekday() == 6)  # Last Sunday of March
-    last_sunday_october = max(day for day in range(25, 32) if datetime(now_utc.year, 10, day).weekday() == 6)  # Last Sunday of October
+    # Determine if the given date is in summer (EEST, UTC+3) or winter (EET, UTC+2)
+    last_sunday_march = max(day for day in range(25, 32) if datetime(date.year, 3, day).weekday() == 6)  # Last Sunday of March
+    last_sunday_october = max(day for day in range(25, 32) if datetime(date.year, 10, day).weekday() == 6)  # Last Sunday of October
 
-    if (now_utc.month > 3 and now_utc.month < 10) or (now_utc.month == 3 and now_utc.day >= last_sunday_march) or (now_utc.month == 10 and now_utc.day < last_sunday_october):
+    if (date.month > 3 and date.month < 10) or (date.month == 3 and date.day >= last_sunday_march) or (date.month == 10 and date.day < last_sunday_october):
         summer_time = True
     else:
         summer_time = False
@@ -44,4 +45,4 @@ def get_default_schedule(notams):
         open_hour_utc, close_hour_utc = 5, 13  # Winter (UTC+2 -> UTC)
 
     # Return schedule in a list format
-    return [f"{now_utc.strftime('%a, %d.%m.%Y')} {open_hour_utc:02}:00 - {close_hour_utc:02}:00"]
+    return [f"{target_datetime.strftime('%a, %d.%m.%Y')} {open_hour_utc:02}:00 - {close_hour_utc:02}:00"]
