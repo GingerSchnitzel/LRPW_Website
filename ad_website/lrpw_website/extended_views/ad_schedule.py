@@ -82,21 +82,28 @@ def scrape_notams(NOTAMS_URL=NOTAM.URL):
                                 extracted_schedule = parse_NOTAM_contents(NOTAM_start_date, NOTAM_end_date, content)
                                 NOTAM_schedule = convert_schedule_to_eet(extracted_schedule)
 
-                                # Add "OPEN" as the first element in the schedule list
+                                # Add "CLOSED" as the first element in the schedule list
                                 if NOTAM_schedule:
                                     NOTAM_schedule = [["CLOSED"] + schedule_item for schedule_item in NOTAM_schedule]  # Prepend "CLOSED" to each inner list
                                 
                                 section_D_parsed = True
                             
-                        if identifier == 'E' and not NOTAM_schedule:
-                            if not NOTAM_schedule or not section_D_parsed:
-                                NOTAM_section_E = content.strip()
+                        if identifier == 'E':
+                            NOTAM_section_E = content.strip()
+                            if section_D_parsed == True and NOTAM.AD_CLOSED not in NOTAM_section_E and NOTAM.AD_OPEN not in NOTAM_section_E:
+                                    
+                                print("Section D extracted, but not schedule NOTAM. Skipping.")
+                                print(f"Section D contents: {NOTAM_schedule}")
+                                print(f"But section E contents: {NOTAM_section_E}")
+                                NOTAM_schedule = []
+                                continue
 
+                            if not NOTAM_schedule:
                                 if NOTAM.AD_CLOSED in NOTAM_section_E:
                                     NOTAM_ad_open = False
                                 elif NOTAM.AD_OPEN in NOTAM_section_E:
                                     NOTAM_ad_open = True
-                                    
+
                                 if NOTAM.AD_CLOSED in NOTAM_section_E and NOTAM.AD_OPEN in NOTAM_section_E:
                                     mixed_open_closed = True
 

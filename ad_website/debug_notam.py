@@ -46,9 +46,28 @@ AD CLSD:
 SAT, 16 SEP 2023: 1130-1300
 """
 
+mock_html2 = """
+<div style="font-family:monospace; font-size:large;">
+(A0885/25 NOTAMR A0880/25
+Q) LRBB/QMRLT/IV/NBO/A /000/999/4430N02606E005
+A) LRBS B) 2502211326 C) 2502221500
+D) FRI 1340-1500, SAT 0600-0700 0800-1200 1330-1500
+E) LANDING ON RWY 07 IS NOT PERMITTED)
+"""
+
+mock_html3 = """
+<div style="font-family:monospace; font-size:large;">
+(A2225/23 NOTAMR A2197/23
+Q) LRBB/QFALC/IV/NBO/A /000/999/4455N02558E005
+A) LRPW B) 2306020839 C) 2306051200
+D) FRI 0400-1029 1101-1200, MON 0400-1200
+E) AD CLSD FOR AIR TRAFFIC))
+"""
+
+
 def debug_notam_parsing():
     # Parse the HTML using BeautifulSoup
-    soup = BeautifulSoup(mock_html1, 'html.parser')
+    soup = BeautifulSoup(mock_html3, 'html.parser')
     
     print("1. Finding NOTAM entries...")
     notam_entries = soup.find_all("div", style="font-family:monospace; font-size:large;")
@@ -113,11 +132,21 @@ def debug_notam_parsing():
                                 if NOTAM_schedule:
                                     NOTAM_schedule = [["CLOSED"] + schedule_item for schedule_item in NOTAM_schedule]  # Prepend "CLOSED" to each inner list
                                 print(f"   Section D schedule: {NOTAM_schedule}")
+                                
                                 section_D_parsed = True
+                                print(f"section_D_parsed: {section_D_parsed}")
                             
-                        if identifier == 'E' and not NOTAM_schedule:
-                            if not NOTAM_schedule or not section_D_parsed:
-                                NOTAM_section_E = content.strip()
+                        if identifier == 'E':
+                            NOTAM_section_E = content.strip()
+                            if section_D_parsed == True and "AD CLSD" not in NOTAM_section_E and "TEMPORARY CHANGE OF AD ADMINISTRATION OPS HOURS" not in NOTAM_section_E:
+                                    print("Section D extracted, but not schedule NOTAM. Skipping.")
+                                    print(f"Section D contents: {NOTAM_schedule}")
+                                    print(f"But section E contents: {NOTAM_section_E}")
+                                    NOTAM_schedule = []
+                                    continue
+                            
+                            if not NOTAM_schedule:
+                                
                                 print(f"   Section E content: {NOTAM_section_E[:100]}...")
                                 
                                 # Special handling for E section
@@ -130,6 +159,7 @@ def debug_notam_parsing():
                                 elif "TEMPORARY CHANGE OF AD ADMINISTRATION OPS HOURS" in NOTAM_section_E:
                                     NOTAM_ad_open = True
                                     print("   Setting AD status: OPEN (temporary change)")
+
                                 if "TEMPORARY CHANGE OF AD ADMINISTRATION OPS HOURS" in NOTAM_section_E and "AD CLSD" in NOTAM_section_E:
                                     mixed_open_close = True
                                     print("    Ad status: mixed")
@@ -218,7 +248,7 @@ if __name__ == "__main__":
     with patch('requests.Session.get') as mock_get:
         mock_response = MagicMock()
         mock_response.status_code = 200
-        mock_response.content = mock_html1.encode("utf-8")
+        mock_response.content = mock_html3.encode("utf-8")
         mock_get.return_value = mock_response
         
         # Skip certificate verification for debugging
