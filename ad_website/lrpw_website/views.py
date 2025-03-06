@@ -9,6 +9,7 @@ from datetime import  timedelta
 def get_notams_for_date(target_date):
     """
     Retrieves NOTAMs valid for the given date and determines the schedule.
+    Filters schedule to show only the relevant part for the selected date.
     """
     target_date_str = target_date.strftime("%y%m%d")
 
@@ -37,6 +38,14 @@ def get_notams_for_date(target_date):
             unique_notams[key] = notam
 
     notams_to_display = list(unique_notams.values())
+
+    # **Filter schedule to only show the relevant part for the selected date**
+    for notam in notams_to_display:
+        filtered_schedule = [
+            entry for entry in notam.schedule
+            if target_date.strftime("%a, %d.%m.%Y") in entry
+        ]
+        notam.schedule = filtered_schedule  # Keep only the schedule for the selected date
 
     # Get the default aerodrome schedule if no NOTAMs are available
     schedule = get_default_schedule(notams, target_date)

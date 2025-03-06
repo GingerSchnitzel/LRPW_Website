@@ -64,6 +64,17 @@ D) FRI 0400-1029 1101-1200, MON 0400-1200
 E) AD CLSD FOR AIR TRAFFIC))
 """
 
+mock_html4 = """
+<div style="font-family:monospace; font-size:large;">
+(A4650/24 NOTAMN
+Q) LRBB/QFAAH/IV/BO /A /000/999/4455N02558E005
+A) LRPW B) 2408080330 C) 2408170900
+E) TEMPORARY CHANGE OF AD ADMINISTRATION OPS HOURS.
+AD OPEN AS FLW:
+DAILY 0330-0900)
+"""
+
+
 
 def debug_notam_parsing():
     # Parse the HTML using BeautifulSoup

@@ -63,7 +63,7 @@ def scrape_notams(NOTAMS_URL=NOTAM.URL):
                 NOTAM_end_date = None
                 NOTAM_start_hour = None
                 NOTAM_end_hour = None
-                NOTAM_schedule = []
+                NOTAM_schedule = None
 
                 sections = re.findall(r'([A-Z])\) ([\s\S]+?)(?=[A-Z]\) |$)', notam_text)
 
@@ -95,7 +95,7 @@ def scrape_notams(NOTAMS_URL=NOTAM.URL):
                                 print("Section D extracted, but not schedule NOTAM. Skipping.")
                                 print(f"Section D contents: {NOTAM_schedule}")
                                 print(f"But section E contents: {NOTAM_section_E}")
-                                NOTAM_schedule = []
+                                NOTAM_schedule = None
                                 continue
 
                             if not NOTAM_schedule:
