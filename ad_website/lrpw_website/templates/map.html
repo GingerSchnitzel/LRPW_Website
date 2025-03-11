@@ -3,38 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Google Maps with KML</title>
-    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyA_2NXMjYrxDadFgKGP-PIENdikGmo5JHY&callback=initMap" async defer></script>
-    <style>
-        #map {
-            width: 100%;
-            height: 500px;
-        }
-    </style>
+    <title>Embedded Google Map</title>
 </head>
 <body>
-    <h3>LRPW Complete Map</h3>
-    <div id="map"></div>
+    <h1>Google Map Embed Example</h1>
 
-    <script>
-        function initMap() {
-            const map = new google.maps.Map(document.getElementById("map"), {
-                center: { lat: 44.35, lng: 26.10 }, // Set the initial map center
-                zoom: 12,
-            });
-
-            const kmlLayer = new google.maps.KmlLayer({
-                url: "https://raw.githubusercontent.com/GingerSchnitzel/LRPW_Website/main/ad_website/static/kml/LRPW_test_map.kmz",
-                map: map,
-                preserveViewport: true,
-            });
-
-            kmlLayer.addListener("status_changed", function () {
-                if (kmlLayer.getStatus() !== "OK") {
-                    console.error("KML layer failed to load.");
-                }
-            });
-        }
-    </script>
+    <!-- Embed Google Map -->
+    <iframe src="https://www.google.com/maps/d/u/2/embed?mid=16LrxAFkeF4YhxS8pmVhjHVy0Cj6c080&ehbc=2E312F" width="100%" height="600"></iframe>
+    
 </body>
 </html>
