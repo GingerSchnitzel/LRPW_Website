@@ -135,3 +135,6 @@ def merge_schedules(existing_schedule, new_schedule):
     
     return merged_schedule  # Return the merged schedule as a list of strings
 
+def map_view(request):
+    return render(request, "map.html")
+
