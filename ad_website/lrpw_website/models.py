@@ -45,3 +45,36 @@ class NOTAM_model(models.Model):
             return False  # NOTAM is expired (end hour has passed)
 
         return True  # NOTAM is active
+
+class WeatherData(models.Model):
+    timestamp = models.DateTimeField(auto_now_add=True)
+    
+    # Temperature Data
+    outdoor_temp = models.FloatField(null=True, blank=True)
+    indoor_temp = models.FloatField(null=True, blank=True)
+    dew_point = models.FloatField(null=True, blank=True)  # Added dew point
+
+    # Humidity
+    outdoor_humidity = models.IntegerField(null=True, blank=True)
+    indoor_humidity = models.IntegerField(null=True, blank=True)
+
+    # Wind Data
+    wind_speed = models.FloatField(null=True, blank=True)
+    wind_gust = models.FloatField(null=True, blank=True)
+    wind_direction = models.IntegerField(null=True, blank=True)
+
+    # Solar & UV
+    solar_radiation = models.FloatField(null=True, blank=True)
+    uv_index = models.IntegerField(null=True, blank=True)
+
+    # Rainfall
+    rain_rate = models.FloatField(null=True, blank=True)
+    daily_rain = models.FloatField(null=True, blank=True)
+
+    # Pressure
+    relative_pressure = models.FloatField(null=True, blank=True)
+    absolute_pressure = models.FloatField(null=True, blank=True)
+
+    def __str__(self):
+        return f"WeatherData @ {self.timestamp}"
+

@@ -1,10 +1,13 @@
 from django.shortcuts import render
 from .extended_views.ad_schedule import scrape_notams
 from .extended_views.default_schedule import get_default_schedule
+from .extended_views.weather_info import fetch_weather_data
 from django.http import JsonResponse
 from datetime import date
 from .models import NOTAM_model
 from datetime import  timedelta
+from django.http import JsonResponse
+
 
 def get_notams_for_date(target_date):
     """
@@ -138,3 +141,11 @@ def merge_schedules(existing_schedule, new_schedule):
 def map_view(request):
     return render(request, "map.html")
 
+def weather_view(request):
+    """Renders the weather dashboard HTML template."""
+    return render(request, "weather.html")
+
+def weather_api(request):
+    """Returns weather data as JSON."""
+    weather_data = fetch_weather_data()
+    return JsonResponse(weather_data)

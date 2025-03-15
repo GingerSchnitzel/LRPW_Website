@@ -1,0 +1,808 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weather Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #4a86e8;
+            --cold-color: #4a86e8;
+            --hot-color: #e74c3c;
+            --card-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            --card-radius: 10px;
+        }
+
+        body {
+            background-color: #f8f9fa;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .dark-mode {
+            background-color: #222;
+            color: #f8f9fa;
+        }
+
+        .dark-mode .card,
+        .dark-mode .card-header {
+            background-color: #333;
+            color: #f8f9fa;
+            border-color: #444;
+        }
+
+        .dark-mode .temp-detail-item p,
+        .dark-mode .temp-detail-item strong,
+        .dark-mode .temp-detail-item i,
+        .dark-mode .location-name,
+        .dark-mode .text-muted {
+            color: #f8f9fa !important; /* Light text color in dark mode */
+        }
+
+        .header-container {
+            margin-bottom: 30px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+
+        .location-info {
+            margin-bottom: 10px;
+        }
+
+        .location-name {
+            margin: 0;
+            font-size: 1.5rem;
+            font-weight: 500;
+        }
+
+        .mode-toggle {
+            margin-top: 10px;
+        }
+
+        .weather-card {
+            margin-bottom: 20px;
+            border-radius: var(--card-radius);
+            box-shadow: var(--card-shadow);
+            transition: transform 0.2s ease;
+            overflow: hidden;
+            height: 100%; /* Ensure cards take full height */
+            display: flex;
+            flex-direction: column;
+        }
+
+        .weather-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .card-header {
+            background-color: #f8f9fa;
+            font-weight: 600;
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+        }
+
+        .card-header i {
+            margin-right: 10px;
+            color: var(--primary-color);
+        }
+
+        .card-body {
+            flex: 1; /* Allow card body to grow and fill remaining space */
+        }
+
+        .temp-details {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 15px;
+        }
+
+        .temp-detail-item {
+            text-align: center;
+        }
+
+        .temp-detail-item p {
+            margin: 0;
+            font-size: 1rem;
+            color: #6c757d; /* Muted text color */
+        }
+
+        .temp-detail-item strong {
+            font-size: 1.2rem;
+            font-weight: 500;
+            color: #000; /* Dark text color */
+        }
+
+        .temp-detail-item i {
+            color: var(--primary-color); /* Icon color */
+            margin-bottom: 5px;
+        }
+
+        .hot-temp {
+            color: var(--hot-color);
+        }
+
+        .cold-temp {
+            color: var(--cold-color);
+        }
+
+        /* Style for temperature and wind unit toggles */
+        .temp-unit-toggle,
+        .wind-unit-toggle {
+            padding: 2px 6px;
+            font-size: 0.8rem;
+            margin-left: 8px;
+            background-color: #f8f9fa;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+            cursor: pointer;
+            color: var(--primary-color);
+            transition: background-color 0.2s ease, color 0.2s ease;
+        }
+
+        /* Active state for both temperature and wind unit toggles */
+        .temp-unit-toggle.active,
+        .wind-unit-toggle.active {
+            font-weight: normal; /* Explicitly set font weight */
+            background-color: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+        }
+
+        .progress-container {
+            margin: 15px 0;
+        }
+
+        .progress-bar {
+            height: 10px;
+            border-radius: 5px;
+            background-color: #f3f3f3;
+        }
+
+        .progress-fill {
+            height: 100%;
+            border-radius: 5px;
+        }
+
+        .uv-fill {
+            background: linear-gradient(to right, #2ecc71, #f1c40f, #e74c3c);
+        }
+
+        .humidity-fill {
+            background-color: #3498db;
+        }
+
+        .wind-compass {
+            width: 100%;
+            max-width: 150px; /* Responsive width */
+            height: auto; /* Maintain aspect ratio */
+            aspect-ratio: 1; /* Ensure it remains square */
+            border-radius: 50%;
+            border: 2px solid #ddd;
+            position: relative;
+            margin: 20px auto;
+        }
+
+        .compass-arrow {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            width: 2px;
+            height: 50%;
+            background-color: #e74c3c;
+            transform-origin: bottom center;
+        }
+
+        .compass-directions {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+        }
+
+        .compass-directions span {
+            position: absolute;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .compass-directions .north {
+            top: -20px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .compass-directions .east {
+            top: 50%;
+            right: -20px;
+            transform: translateY(-50%);
+        }
+
+        .compass-directions .south {
+            bottom: -20px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .compass-directions .west {
+            top: 50%;
+            left: -20px;
+            transform: translateY(-50%);
+        }
+
+        .compass-directions .northeast {
+            top: -15px;
+            right: -15px;
+        }
+
+        .compass-directions .southeast {
+            bottom: -15px;
+            right: -15px;
+        }
+
+        .compass-directions .southwest {
+            bottom: -15px;
+            left: -15px;
+        }
+
+        .compass-directions .northwest {
+            top: -15px;
+            left: -15px;
+        }
+
+        .compass-degrees {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+        }
+
+        .compass-degrees span {
+            position: absolute;
+            font-size: 10px;
+            color: #777;
+        }
+
+        .compass-degrees .deg0 {
+            top: 2px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .compass-degrees .deg45 {
+            top: 15%;
+            right: 15%;
+        }
+
+        .compass-degrees .deg90 {
+            top: 50%;
+            right: 2px;
+            transform: translateY(-50%);
+        }
+
+        .compass-degrees .deg135 {
+            bottom: 15%;
+            right: 15%;
+        }
+
+        .compass-degrees .deg180 {
+            bottom: 2px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .compass-degrees .deg225 {
+            bottom: 15%;
+            left: 15%;
+        }
+
+        .compass-degrees .deg270 {
+            top: 50%;
+            left: 2px;
+            transform: translateY(-50%);
+        }
+
+        .compass-degrees .deg315 {
+            top: 15%;
+            left: 15%;
+        }
+
+        .units-toggle {
+            cursor: pointer;
+            margin-left: 10px;
+            color: var(--primary-color);
+        }
+
+        .last-update {
+            text-align: center;
+            font-style: italic;
+            font-size: 0.8rem;
+            color: #6c757d;
+            margin-top: 5px;
+        }
+
+        .rain-chart {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            height: 150px; /* Fixed height for the chart */
+            margin: 20px 0;
+        }
+
+        .chart-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center; /* Center bars and labels horizontally */
+            width: 18%; /* Adjust width as needed */
+        }
+
+        .chart-bar {
+            position: relative;
+            height: 100px; /* Reduced height */
+            width: 100%; /* Full width of the parent */
+            max-width: 40px; /* Limit maximum width */
+            background-color: rgba(74, 134, 232, 0.2); /* Light blue background for the bar */
+            border-radius: 5px 5px 0 0;
+            display: flex;
+            align-items: flex-end; /* Align bars to the bottom */
+        }
+
+        .chart-fill {
+            width: 100%; /* Full width of the parent */
+            background-color: rgba(74, 134, 232, 0.7); /* Darker blue fill for the bar */
+            border-radius: 5px 5px 0 0;
+            transition: height 0.3s ease; /* Smooth transition for height changes */
+        }
+
+        .chart-label {
+            text-align: center;
+            font-size: 0.8rem;
+            margin-top: 5px; /* Space between bar and label */
+        }
+
+        @media (max-width: 768px) {
+            .temp-details {
+                flex-direction: column;
+            }
+
+            .temp-detail-item {
+                margin-bottom: 10px;
+            }
+
+            .location-name {
+                font-size: 1.2rem; /* Smaller font size for mobile */
+            }
+
+            .chart-bar {
+                max-width: 30px; /* Smaller bars for mobile */
+            }
+
+            /* Ensure wind information text is aligned vertically on smaller screens */
+            .wind-details {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                text-align: center;
+            }
+
+            .wind-details p {
+                margin: 5px 0; /* Add spacing between wind details */
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container py-4">
+        <!-- Header with Location and Controls -->
+        <div class="header-container">
+            <div class="location-info">
+                <h1 class="location-name">Weather Dashboard <small class="text-muted">LRPW</small></h1>
+            </div>
+
+            <!-- Dark Mode Toggle Button -->
+            <button class="btn btn-sm btn-outline-secondary mode-toggle" id="modeToggle">
+                <i class="fas fa-moon"></i> Dark Mode
+            </button>
+        </div>
+
+        <!-- Weather and Pressure Cards -->
+        <div class="row">
+            <!-- Temperature Card -->
+            <div class="col-12 col-md-6 mb-3">
+                <div class="card weather-card h-100">
+                    <div class="card-header">
+                        <i class="fas fa-thermometer-half"></i> Temperature
+                        <div class="ms-auto">
+                            <button class="btn btn-sm btn-outline-secondary temp-unit-toggle active" data-unit="C">°C</button>
+                            <button class="btn btn-sm btn-outline-secondary temp-unit-toggle" data-unit="F">°F</button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="temp-details">
+                            <!-- Outside Temperature -->
+                            <div class="temp-detail-item text-center">
+                                <i class="fas fa-thermometer-half"></i>
+                                <p><strong>OAT</strong></p>
+                                <p><strong><strong id="tempValue"></strong><span id="tempUnit"></span></strong></p>
+                            </div>
+                            <!-- Feels Like -->
+                            <div class="temp-detail-item text-center">
+                                <i class="fas fa-thermometer-full"></i>
+                                <p><strong>Feels Like</strong></p>
+                                <p><strong><span id="feelsLikeTemp"></span></strong></p>
+                            </div>
+                            <!-- Dew Point -->
+                            <div class="temp-detail-item text-center">
+                                <i class="fas fa-tint"></i>
+                                <p><strong>Dew Point</strong></p>
+                                <p><strong id="dewPoint"></strong></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Local QNH Card -->
+            <div class="col-12 col-md-6 mb-3">
+                <div class="card weather-card h-100">
+                    <div class="card-header">
+                        <i class="fas fa-compress-alt"></i> Local QNH
+                    </div>
+                    <div class="card-body d-flex justify-content-center align-items-center">
+                        <h2 class="text-center" id="relPressure"></h2>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Wind Data and Humidity Cards -->
+        <div class="row mt-4">
+            <!-- Wind Data Card -->
+            <div class="col-12 col-md-6 mb-3">
+                <div class="card weather-card h-100">
+                    <div class="card-header">
+                        <i class="fas fa-wind"></i> Wind Data
+                        <div class="ms-auto">
+                            <!-- Wind Unit Toggle Buttons -->
+                            <button class="btn btn-sm btn-outline-secondary wind-unit-toggle active" data-unit="m/s">m/s</button>
+                            <button class="btn btn-sm btn-outline-secondary wind-unit-toggle" data-unit="km/h">km/h</button>
+                            <button class="btn btn-sm btn-outline-secondary wind-unit-toggle" data-unit="knots">kn</button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="row align-items-center">
+                            <!-- Compass Column -->
+                            <div class="col-12 col-md-6 text-center">
+                                <div class="wind-compass">
+                                    <div class="compass-directions">
+                                        <span class="north">N</span>
+                                        <span class="northeast">NE</span>
+                                        <span class="east">E</span>
+                                        <span class="southeast">SE</span>
+                                        <span class="south">S</span>
+                                        <span class="southwest">SW</span>
+                                        <span class="west">W</span>
+                                        <span class="northwest">NW</span>
+                                    </div>
+                                    <div class="compass-degrees">
+                                        <span class="deg0">0°</span>
+                                        <span class="deg45">45°</span>
+                                        <span class="deg90">90°</span>
+                                        <span class="deg135">135°</span>
+                                        <span class="deg180">180°</span>
+                                        <span class="deg225">225°</span>
+                                        <span class="deg270">270°</span>
+                                        <span class="deg315">315°</span>
+                                    </div>
+                                    <div class="compass-arrow" id="windArrow" style="transform: rotate(36deg)"></div>
+                                </div>
+                            </div>
+                            <!-- Wind Details Column -->
+                            <div class="col-12 col-md-6">
+                                <div class="wind-details mt-3">
+                                    <p>Wind Speed: <strong><span id="windSpeed">0.9</span> <span id="windSpeedUnit">m/s</span></strong></p>
+                                    <p>Wind Gust: <strong><span id="windGust">2.0</span> <span id="windGustUnit">m/s</span></strong></p>
+                                    <p>Wind Direction: <strong id="windDirection">36° NE</strong></p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Humidity & UV Index Card -->
+            <div class="col-12 col-md-6 mb-3">
+                <div class="card weather-card h-100">
+                    <div class="card-header">
+                        <i class="fas fa-tint"></i> Humidity & UV Index
+                    </div>
+                    <div class="card-body">
+                        <h5>Humidity: <strong id="humidityValue"></strong></h5>
+                        <div class="progress-container">
+                            <div class="progress-bar">
+                                <div class="progress-fill humidity-fill" style="width: 68%"></div>
+                            </div>
+                        </div>
+
+                        <h5 class="mt-4">UV Index: <strong id="uvValue"></strong></h5>
+                        <div class="progress-container">
+                            <div class="progress-bar">
+                                <div class="progress-fill uv-fill" style="width: 40%"></div>
+                            </div>
+                        </div>
+                        <div class="uv-legend d-flex justify-content-between mt-1">
+                            <span class="text-success">Low</span>
+                            <span class="text-warning">Moderate</span>
+                            <span class="text-danger">High</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Rainfall Data with Chart -->
+        <div class="card weather-card mt-4">
+            <div class="card-header">
+                <i class="fas fa-cloud-rain"></i> Rainfall Data
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        <p>Current Rain Rate: <strong id="rainRate"></strong></p>
+                    </div>
+                    <div class="col-md-8">
+                        <div class="rain-chart">
+                            <!-- Daily Rain -->
+                            <div class="chart-container">
+                                <div class="chart-bar">
+                                    <div class="chart-fill" id="dailyRainBar" style="height: 20%"></div>
+                                </div>
+                                <div class="chart-label">Daily<br><span id="dailyRain">0.0 mm</span></div>
+                            </div>
+                            <!-- Weekly Rain -->
+                            <div class="chart-container">
+                                <div class="chart-bar">
+                                    <div class="chart-fill" id="weeklyRainBar" style="height: 45%"></div>
+                                </div>
+                                <div class="chart-label">Weekly<br><span id="weeklyRain">0.0 mm</span></div>
+                            </div>
+                            <!-- Monthly Rain -->
+                            <div class="chart-container">
+                                <div class="chart-bar">
+                                    <div class="chart-fill" id="monthlyRainBar" style="height: 65%"></div>
+                                </div>
+                                <div class="chart-label">Monthly<br><span id="monthlyRain">0.0 mm</span></div>
+                            </div>
+                            <!-- Yearly Rain -->
+                            <div class="chart-container">
+                                <div class="chart-bar">
+                                    <div class="chart-fill" id="yearlyRainBar" style="height: 85%"></div>
+                                </div>
+                                <div class="chart-label">Yearly<br><span id="yearlyRain">0.0 mm</span></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Last Update Time -->
+        <div class="last-update mt-4">
+            Last updated: <span id="lastUpdate"></span>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Dark Mode Toggle
+        const modeToggle = document.getElementById('modeToggle');
+        const body = document.body;
+
+        modeToggle.addEventListener('click', () => {
+            body.classList.toggle('dark-mode');
+            const isDarkMode = body.classList.contains('dark-mode');
+            modeToggle.innerHTML = `<i class="fas ${isDarkMode ? 'fa-sun' : 'fa-moon'}"></i> ${isDarkMode ? 'Light' : 'Dark'} Mode`;
+        });
+
+        // Temperature Unit Toggles
+        const tempUnitToggles = document.querySelectorAll('.temp-unit-toggle');
+        const tempValue = document.getElementById('tempValue');
+        const tempUnit = document.getElementById('tempUnit');
+        const feelsLikeTemp = document.getElementById('feelsLikeTemp');
+        const dewPoint = document.getElementById('dewPoint');
+
+        let isCelsius = true;
+
+        // Store original Celsius values
+        let originalTempC = null;
+        let originalFeelsLikeC = null;
+        let originalDewPointC = null;
+
+        // Conversion functions
+        function convertToF(celsius) {
+            return (celsius * 9 / 5) + 32;
+        }
+
+        function convertToC(fahrenheit) {
+            return (fahrenheit - 32) * 5 / 9;
+        }
+
+        // Function to update displayed temperatures
+        function updateTemperatures(data) {
+            // Store original Celsius values
+            originalTempC = data.outdoor_temp;
+            originalFeelsLikeC = data.outdoor_feels_like;
+            originalDewPointC = data.outdoor_dew_point;
+
+            if (isCelsius) {
+                // Display in Celsius
+                tempValue.textContent = originalTempC.toFixed(1);
+                tempUnit.textContent = '°C';
+                feelsLikeTemp.textContent = `${originalFeelsLikeC.toFixed(1)}°C`;
+                dewPoint.textContent = `${originalDewPointC.toFixed(1)}°C`;
+            } else {
+                // Display in Fahrenheit
+                tempValue.textContent = convertToF(originalTempC).toFixed(1);
+                tempUnit.textContent = '°F';
+                feelsLikeTemp.textContent = `${convertToF(originalFeelsLikeC).toFixed(1)}°F`;
+                dewPoint.textContent = `${convertToF(originalDewPointC).toFixed(1)}°F`;
+            }
+        }
+
+        // Toggle temperature unit
+        tempUnitToggles.forEach(toggle => {
+            toggle.addEventListener('click', () => {
+                const newUnit = toggle.dataset.unit;
+
+                // Skip if already active
+                if ((newUnit === 'C' && isCelsius) || (newUnit === 'F' && !isCelsius)) return;
+
+                // Update UI
+                tempUnitToggles.forEach(t => t.classList.remove('active'));
+                toggle.classList.add('active');
+
+                // Toggle unit
+                isCelsius = newUnit === 'C';
+
+                // Update displayed temperatures using stored Celsius values
+                updateTemperatures({
+                    outdoor_temp: originalTempC,
+                    outdoor_feels_like: originalFeelsLikeC,
+                    outdoor_dew_point: originalDewPointC
+                });
+            });
+        });
+
+        // Wind Speed Unit Toggles
+        const windUnitToggles = document.querySelectorAll('.wind-unit-toggle');
+        const windSpeedElement = document.getElementById('windSpeed');
+        const windGustElement = document.getElementById('windGust');
+        const windSpeedUnitElement = document.getElementById('windSpeedUnit');
+        const windGustUnitElement = document.getElementById('windGustUnit');
+
+        let currentWindUnit = 'm/s'; // Default unit
+        let originalWindSpeedMps = null; // Store original wind speed in m/s
+        let originalWindGustMps = null; // Store original wind gust in m/s
+
+        // Conversion functions for wind speed
+        function convertWindSpeed(speed, unit) {
+            switch (unit) {
+                case 'm/s':
+                    return speed;
+                case 'km/h':
+                    return speed * 3.6;
+                case 'knots':
+                    return speed * 1.94384;
+                default:
+                    return speed;
+            }
+        }
+
+        // Update wind speed display
+        function updateWindSpeedDisplay() {
+            if (originalWindSpeedMps !== null && originalWindGustMps !== null) {
+                windSpeedElement.textContent = convertWindSpeed(originalWindSpeedMps, currentWindUnit).toFixed(1);
+                windGustElement.textContent = convertWindSpeed(originalWindGustMps, currentWindUnit).toFixed(1);
+                windSpeedUnitElement.textContent = currentWindUnit;
+                windGustUnitElement.textContent = currentWindUnit;
+            }
+        }
+
+        // Toggle wind speed unit
+        windUnitToggles.forEach(toggle => {
+            toggle.addEventListener('click', () => {
+                const newUnit = toggle.dataset.unit;
+
+                // Skip if already active
+                if (newUnit === currentWindUnit) return;
+
+                // Update UI
+                windUnitToggles.forEach(t => t.classList.remove('active'));
+                toggle.classList.add('active');
+
+                // Update current unit
+                currentWindUnit = newUnit;
+
+                // Update displayed wind speeds
+                updateWindSpeedDisplay();
+            });
+        });
+
+        // Update weather data
+        function updateWeatherUI(data) {
+            // Store original wind speeds in m/s
+            originalWindSpeedMps = data.wind_speed;
+            originalWindGustMps = data.wind_gust;
+
+            // Update wind speed display
+            updateWindSpeedDisplay();
+
+            // Update temperature data
+            updateTemperatures(data);
+
+            // Update other weather data
+            document.getElementById('humidityValue').textContent = `${data.outdoor_humidity}%`;
+            document.querySelector('.humidity-fill').style.width = `${data.outdoor_humidity}%`;
+            document.getElementById('uvValue').textContent = data.uv_index;
+            document.querySelector('.uv-fill').style.width = `${(data.uv_index / 12) * 100}%`;
+            document.getElementById('windDirection').textContent = `${data.wind_direction}° ${getCardinalDirection(data.wind_direction)}`;
+            document.getElementById('windArrow').style.transform = `rotate(${data.wind_direction}deg)`;
+            document.getElementById('relPressure').textContent = `${data.relative_pressure.toFixed(1)} hPa`;
+            document.getElementById('rainRate').textContent = `${data.rain_rate.toFixed(1)} mm/hr`;
+            document.getElementById('dailyRain').textContent = `${data.daily_rain.toFixed(1)} mm`;
+            document.getElementById('weeklyRain').textContent = `${data.weekly_rain.toFixed(1)} mm`;
+            document.getElementById('monthlyRain').textContent = `${data.monthly_rain.toFixed(1)} mm`;
+            document.getElementById('yearlyRain').textContent = `${data.yearly_rain.toFixed(1)} mm`;
+            document.getElementById('lastUpdate').textContent = new Date(data.last_update_time).toLocaleString();
+
+            // Update rain chart
+            setRainChartScaling();
+        }
+
+        // Helper function to convert wind direction degrees to cardinal direction
+        function getCardinalDirection(degrees) {
+            const directions = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
+            const index = Math.round(degrees / 22.5) % 16;
+            return directions[index];
+        }
+
+        // Helper function to scale rain chart bars
+        function setRainChartScaling() {
+            const dailyRain = parseFloat(document.getElementById('dailyRain').textContent);
+            const weeklyRain = parseFloat(document.getElementById('weeklyRain').textContent);
+            const monthlyRain = parseFloat(document.getElementById('monthlyRain').textContent);
+            const yearlyRain = parseFloat(document.getElementById('yearlyRain').textContent);
+
+            const maxRain = Math.max(dailyRain, weeklyRain, monthlyRain, yearlyRain);
+
+            if (maxRain > 0) {
+                document.getElementById('dailyRainBar').style.height = (dailyRain / maxRain * 100) + '%';
+                document.getElementById('weeklyRainBar').style.height = (weeklyRain / maxRain * 100) + '%';
+                document.getElementById('monthlyRainBar').style.height = (monthlyRain / maxRain * 100) + '%';
+                document.getElementById('yearlyRainBar').style.height = (yearlyRain / maxRain * 100) + '%';
+            }
+        }
+
+         // Fetch weather data
+         async function fetchWeatherData() {
+            try {
+                const response = await fetch('/api/weather/');
+                if (!response.ok) {
+                    throw new Error('Failed to fetch weather data');
+                }
+                const data = await response.json();
+                updateWeatherUI(data);
+            } catch (error) {
+                console.error('Error fetching weather data:', error);
+            }
+        }
+
+        // Initialize on load
+        document.addEventListener('DOMContentLoaded', function () {
+            fetchWeatherData();
+            setInterval(fetchWeatherData, 5 * 60 * 1000); // Refresh every 5 minutes
+        });
+    </script>
+</body>
+</html>
